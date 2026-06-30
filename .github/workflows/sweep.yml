@@ -525,7 +525,7 @@ jobs:
       - name: Publish event result and apply safe close
         id: publish-event-result
         env:
-          GH_TOKEN: ${{ steps.target-write-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           REPO_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ steps.target.outputs.target_repo }}
           ITEM_NUMBER: ${{ steps.target.outputs.item_number }}
@@ -534,7 +534,7 @@ jobs:
         run: pnpm run repair:publish-event-result
 
       - name: Dispatch viable issue implementation
-        if: ${{ success() && vars.CLAWSWEEPER_AUTO_IMPLEMENT_ISSUES == '1' && steps.target-write-token.outputs.token != '' && steps.target.outputs.target_repo != 'openclaw/openclaw' && steps.target.outputs.target_repo != 'openclaw/clawhub' && github.event.client_payload.item_kind == 'issue' && (github.event.client_payload.source_action == 'opened' || github.event.client_payload.source_action == 'reopened') }}
+        if: ${{ success() && vars.CLAWSWEEPER_AUTO_IMPLEMENT_ISSUES == '1' && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && steps.target.outputs.target_repo != 'openclaw/openclaw' && steps.target.outputs.target_repo != 'openclaw/clawhub' && github.event.client_payload.item_kind == 'issue' && (github.event.client_payload.source_action == 'opened' || github.event.client_payload.source_action == 'reopened') }}
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ steps.target.outputs.target_repo }}
@@ -568,13 +568,13 @@ jobs:
             -f report_repo=openclaw/clawsweeper-state \
             -f report_path="$report_path" \
             -f report_url="$report_url" \
-            -f model=internal
+            -f model="$CLAWSWEEPER_MODEL"
 
       - name: Route synced ClawSweeper verdict
         id: route-synced-verdict
         timeout-minutes: 4
         env:
-          GH_TOKEN: ${{ steps.target-write-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_DISPATCH_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ steps.target.outputs.target_repo }}
           ITEM_NUMBER: ${{ steps.target.outputs.item_number }}
@@ -596,7 +596,7 @@ jobs:
         if: ${{ always() && steps.setup-pnpm.outcome == 'success' }}
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ steps.target-write-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           TARGET_REPO: ${{ steps.target.outputs.target_repo }}
           ITEM_NUMBER: ${{ steps.target.outputs.item_number }}
           COMMAND_STATUS_MARKER: ${{ github.event.client_payload.command_status_marker || '' }}
@@ -649,7 +649,7 @@ jobs:
       - name: Retry waiting event repair dispatches
         if: ${{ steps.waiting-event-repair-dispatches.outputs.count != '' && steps.waiting-event-repair-dispatches.outputs.count != '0' }}
         env:
-          GH_TOKEN: ${{ steps.target-write-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_DISPATCH_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ steps.target.outputs.target_repo }}
           ITEM_NUMBER: ${{ steps.target.outputs.item_number }}
@@ -683,7 +683,7 @@ jobs:
         if: ${{ success() }}
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ steps.target-write-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           TARGET_REPO: ${{ steps.target.outputs.target_repo }}
           ITEM_NUMBER: ${{ steps.target.outputs.item_number }}
         run: |
@@ -1447,7 +1447,7 @@ jobs:
 
       - name: Apply review artifacts
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           EXACT_ITEM: ${{ github.event.client_payload.item_number || github.event.inputs.item_number || github.event.inputs.item_numbers || '' }}
           HOT_INTAKE: ${{ needs.plan.outputs.hot_intake }}
           MAX_PAGES: ${{ needs.plan.outputs.max_pages }}
@@ -1611,7 +1611,7 @@ jobs:
           done < /tmp/vision-fit-implementation-candidates.tsv
 
       - name: Backfill viable open issue implementation candidates
-        if: ${{ success() && vars.CLAWSWEEPER_AUTO_IMPLEMENT_ISSUES == '1' && steps.target-write-token.outputs.token != '' && needs.plan.outputs.target_repo != 'openclaw/openclaw' && needs.plan.outputs.target_repo != 'openclaw/clawhub' }}
+        if: ${{ success() && vars.CLAWSWEEPER_AUTO_IMPLEMENT_ISSUES == '1' && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && needs.plan.outputs.target_repo != 'openclaw/openclaw' && needs.plan.outputs.target_repo != 'openclaw/clawhub' }}
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ needs.plan.outputs.target_repo }}
@@ -1652,11 +1652,11 @@ jobs:
               -f report_repo=openclaw/clawsweeper-state \
               -f report_path="$report_path" \
               -f report_url="$report_url" \
-              -f model=internal
+              -f model="$CLAWSWEEPER_MODEL"
           done < /tmp/viable-implementation-candidates.tsv
 
       - name: Dispatch background review comment sync
-        if: ${{ success() && steps.target-write-token.outputs.token != '' && needs.plan.outputs.hot_intake != 'true' && (github.event_name != 'repository_dispatch' || github.event.action == 'clawsweeper_target_sweep') && (github.event_name != 'workflow_dispatch' || (github.event.inputs.item_number == '' && github.event.inputs.item_numbers == '')) }}
+        if: ${{ success() && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && needs.plan.outputs.hot_intake != 'true' && (github.event_name != 'repository_dispatch' || github.event.action == 'clawsweeper_target_sweep') && (github.event_name != 'workflow_dispatch' || (github.event.inputs.item_number == '' && github.event.inputs.item_numbers == '')) }}
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ needs.plan.outputs.target_repo }}
@@ -2175,7 +2175,7 @@ jobs:
 
       - name: Reconcile before apply preselect
         env:
-          GH_TOKEN: ${{ steps.target-write-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           TARGET_REPO: ${{ steps.target.outputs.target_repo }}
         run: |
           set -euo pipefail
@@ -2269,7 +2269,7 @@ jobs:
 
       - name: Apply unchanged proposed decisions with checkpoints
         env:
-          GH_TOKEN: ${{ steps.target-write-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           TARGET_REPO: ${{ steps.target.outputs.target_repo }}
           CLAWSWEEPER_PUBLISH_THROTTLE_STATUS: "true"
           CLAWSWEEPER_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
