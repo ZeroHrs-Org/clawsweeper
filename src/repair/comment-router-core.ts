@@ -2135,6 +2135,20 @@ export function issueImplementationBlockerClass(reason: LooseRecord) {
   return isHardIssueImplementationBlocker(String(reason ?? "")) ? "hard" : "soft";
 }
 
+export function issueImplementationSecuritySignal(text: LooseRecord) {
+  const value = String(text ?? "");
+  if (/\b(?:security|vulnerability|cve|ghsa|exploit|xss|csrf|ssrf|rce)\b/i.test(value)) {
+    return true;
+  }
+
+  const credentialTerms = String.raw`(?:secret|credential|token|pat|api key|private key|auth)`;
+  const incidentTerms = String.raw`(?:leak(?:ed|s|ing)?|expos(?:e|ed|es|ure)|compromis(?:e|ed|es)|stolen|exfiltrat(?:e|ed|ion)|revoke|revoked|rotate|rotated|breach(?:ed)?)`;
+  return new RegExp(
+    String.raw`\b${incidentTerms}\b[\s\S]{0,80}\b${credentialTerms}\b|\b${credentialTerms}\b[\s\S]{0,80}\b${incidentTerms}\b`,
+    "i",
+  ).test(value);
+}
+
 export function issueImplementationOverrideAction(reason: LooseRecord) {
   return issueImplementationBlockerClass(reason) === "hard"
     ? "produce a safe non-code plan, decomposition, or human-review handoff instead of a code PR"

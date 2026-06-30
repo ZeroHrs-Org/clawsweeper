@@ -38,6 +38,7 @@ import {
   issueImplementationBlockerClass,
   issueImplementationJobBranch,
   issueImplementationJobPath,
+  issueImplementationSecuritySignal,
   isCanonicalLandingNeedsHumanText,
   isReadyHumanReviewPause,
   latestRepairLoopResumeTime,
@@ -979,6 +980,18 @@ test("issue implementation blocker classifier treats linked PR evidence as hard"
   assert.equal(issueImplementationBlockerClass("work cluster references a PR"), "hard");
   assert.equal(issueImplementationBlockerClass("report repository is openclaw/other"), "hard");
   assert.equal(issueImplementationBlockerClass("missing validation commands"), "soft");
+});
+
+test("issue implementation security signal allows auth docs but blocks credential incidents", () => {
+  assert.equal(
+    issueImplementationSecuritySignal(
+      "Document CODEX_AUTH_JSON_B64 as the required Codex auth secret and mark OPENAI_API_KEY legacy-only.",
+    ),
+    false,
+  );
+  assert.equal(issueImplementationSecuritySignal("Rotate the compromised API token"), true);
+  assert.equal(issueImplementationSecuritySignal("Private key was exposed in logs"), true);
+  assert.equal(issueImplementationSecuritySignal("GHSA advisory reproduction"), true);
 });
 
 test("automerge changelog gate does not block user-facing OpenClaw changes", () => {

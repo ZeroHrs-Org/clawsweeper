@@ -53,6 +53,7 @@ import {
   isIssueImplementationCommandAllowed,
   issueImplementationClusterId,
   issueImplementationJobPath,
+  issueImplementationSecuritySignal,
   isReadyHumanReviewPause,
   maintainerAutomergeOptInApprovesNeedsHuman as maintainerAutomergeOptInApprovesNeedsHumanReason,
   latestRepairLoopResumeTime,
@@ -2101,12 +2102,6 @@ function issueImplementationLinkedPrSignal(target: LooseRecord) {
 function isIssueImplementationProtectedLabel(label: string) {
   return ["security", "beta-blocker", "release-blocker", "maintainer"].includes(
     label.trim().toLowerCase(),
-  );
-}
-
-function issueImplementationSecuritySignal(text: string) {
-  return /\b(?:security|vulnerability|cve|ghsa|secret|credential|token|exploit|xss|csrf|ssrf|rce)\b/i.test(
-    text,
   );
 }
 
