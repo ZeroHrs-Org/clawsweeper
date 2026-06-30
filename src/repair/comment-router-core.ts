@@ -2125,7 +2125,7 @@ function implementationPromptFromCommand(command: LooseRecord) {
   return String(command ?? "")
     .trim()
     .replace(
-      /^(?:implement|build(?:\s+override)?|create\s+pr|open\s+pr|fix\s+issue|fix)\b[:\s-]*/i,
+      /^(?:execute\s+plan|implement|build(?:\s+override)?|create\s+pr|open\s+pr|fix\s+issue|fix)\b[:\s-]*/i,
       "",
     )
     .trim();
@@ -2159,7 +2159,7 @@ function isHardIssueImplementationBlocker(reason: string) {
 }
 
 function isIssueImplementationOverride(command: string) {
-  return /^build\s+override(?:\s|$)/i.test(command.trim());
+  return /^(?:build\s+override|execute\s+plan)(?:\s|$)/i.test(command.trim());
 }
 
 function assistPromptFromCommand(command: LooseRecord) {
@@ -2219,6 +2219,8 @@ function normalizeIntent(command: LooseRecord) {
     return "fix_ci";
   if (["address review", "address-review", "fix review"].includes(command)) return "address_review";
   if (
+    command === "execute plan" ||
+    command.startsWith("execute plan ") ||
     command === "implement" ||
     command.startsWith("implement ") ||
     command === "build" ||

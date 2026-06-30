@@ -642,6 +642,7 @@ test("comment router rewrites existing issue implementation jobs on override", (
   const source = readFileSync("src/repair/comment-router.ts", "utf8");
 
   assert.match(source, /command\.operator_override === true/);
+  assert.match(source, /pauseLabels\.length > 0 && command\.operator_override !== true/);
   assert.match(source, /fs\.writeFileSync\(\s*absolute,\s*renderIssueImplementationJob/s);
   assert.match(source, /issueImplementationJobOptions\(command\)/);
   assert.match(source, /statusDetail = "written"/);

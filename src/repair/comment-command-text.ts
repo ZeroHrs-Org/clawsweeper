@@ -18,6 +18,9 @@ export function extractClawSweeperCommandLine(body: unknown): ClawSweeperCommand
   const lines = String(body ?? "").split(/\r?\n/);
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
+    if (/^\s*execute\s+plan\s*$/i.test(line)) {
+      return commandLine("slash", "execute plan", followingLines(lines, index), true);
+    }
     if (/^\s*\/auto(?:-|\s+)?merge\s*$/i.test(line)) {
       return commandLine("slash", "automerge", "", false);
     }

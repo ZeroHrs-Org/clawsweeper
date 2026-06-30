@@ -539,7 +539,7 @@ function classifyCommand(command: LooseRecord): JsonValue {
       };
     }
     const pauseLabels = pauseLabelsOn(target);
-    if (pauseLabels.length > 0) {
+    if (pauseLabels.length > 0 && command.operator_override !== true) {
       return {
         ...next,
         status: "ready",
@@ -2048,9 +2048,7 @@ function issueImplementationJobOptions(command: LooseRecord) {
     implementationPrompt: command.implementation_prompt,
     operatorOverride: command.operator_override === true,
     overrideRequestedBy: command.author,
-    overrideReason: command.operator_override
-      ? "maintainer requested /clawsweeper build override"
-      : null,
+    overrideReason: command.operator_override ? issueImplementationOverrideReason(command) : null,
     overrideBlockerClass,
     overrideAction: command.operator_override
       ? overrideBlockerClass === "hard"
@@ -2062,6 +2060,12 @@ function issueImplementationJobOptions(command: LooseRecord) {
       issueCommentsFor(command.issue_number),
     ),
   };
+}
+
+function issueImplementationOverrideReason(command: LooseRecord) {
+  return /^execute\s+plan(?:\s|$)/i.test(String(command.command ?? "").trim())
+    ? "maintainer requested Execute Plan"
+    : "maintainer requested /clawsweeper build override";
 }
 
 function issueImplementationOverrideBlockerClass(command: LooseRecord) {

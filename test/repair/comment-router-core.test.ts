@@ -271,6 +271,20 @@ test("parseCommand recognizes maintainer slash commands", () => {
     implementation_prompt: "Keep the handoff concrete.",
     operator_override: true,
   });
+  assert.deepEqual(parseCommand("Execute Plan"), {
+    trigger: "slash",
+    command: "execute plan",
+    intent: "implement_issue",
+    implementation_prompt: "",
+    operator_override: true,
+  });
+  assert.deepEqual(parseCommand("Execute Plan\nRun Android proof before patching."), {
+    trigger: "slash",
+    command: "execute plan run android proof before patching",
+    intent: "implement_issue",
+    implementation_prompt: "Run Android proof before patching.",
+    operator_override: true,
+  });
   assert.deepEqual(parseCommand("/clawsweeper create pr keep the fix narrow"), {
     trigger: "slash",
     command: "create pr keep the fix narrow",
@@ -2559,8 +2573,12 @@ test("assist workflow preserves flat field fallbacks after nested dispatch field
     workflow,
     /LENS: \$\{\{ github\.event\.client_payload\.assist\.lens \|\| github\.event\.client_payload\.lens \|\| inputs\.lens \|\| 'auto' \}\}/,
   );
-  assert.match(workflow, /MODEL: internal/);
-  assert.match(workflow, /CLAWSWEEPER_INTERNAL_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \}\}/);
+  assert.match(
+    workflow,
+    /CLAWSWEEPER_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \|\| vars\.CLAWSWEEPER_MODEL \|\| 'gpt-5\.5' \}\}/,
+  );
+  assert.match(workflow, /MODEL: \$\{\{ env\.CLAWSWEEPER_MODEL \}\}/);
+  assert.match(workflow, /CLAWSWEEPER_INTERNAL_MODEL: \$\{\{ env\.CLAWSWEEPER_MODEL \}\}/);
   assert.match(
     workflow,
     /REASONING_EFFORT: \$\{\{ github\.event\.client_payload\.assist\.reasoning_effort \|\| github\.event\.client_payload\.reasoning_effort \|\| 'low' \}\}/,
