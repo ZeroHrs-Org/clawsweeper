@@ -1988,11 +1988,11 @@ function ensureIssueImplementationJob(command: LooseRecord) {
     if (command.operator_override === true) {
       const absolute = path.join(repoRoot(), command.target.job_path);
       if (fs.existsSync(absolute)) {
-        fs.writeFileSync(
-          absolute,
-          renderIssueImplementationJob(issueImplementationJobOptions(command)),
-        );
-        statusDetail = "written";
+        const next = renderIssueImplementationJob(issueImplementationJobOptions(command));
+        if (fs.readFileSync(absolute, "utf8") !== next) {
+          fs.writeFileSync(absolute, next);
+          statusDetail = "written";
+        }
       }
     }
     return {
