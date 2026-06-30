@@ -8,7 +8,7 @@ inputs:
     description: Exact Codex Responses proxy npm package version.
     default: "0.139.0"
   auth-mode:
-    description: Authentication mode. Use proxy to keep OPENAI_API_KEY out of Codex subprocesses, or login for legacy codex login.
+    description: Authentication mode. Use auth-json for Codex/ChatGPT auth, proxy to keep OPENAI_API_KEY out of Codex subprocesses, or login for legacy codex login.
     default: "proxy"
   codex-home:
     description: CODEX_HOME directory. Defaults to an isolated per-run ClawSweeper directory.
@@ -124,8 +124,32 @@ runs:
           codex login status
         fi
 
+    - name: Authenticate Codex with auth.json
+      if: ${{ inputs['auth-mode'] == 'auth-json' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        export CODEX_HOME="${CODEX_HOME:?}"
+        if [[ -n "${CODEX_AUTH_JSON_B64:-}" ]]; then
+          printf '%s' "$CODEX_AUTH_JSON_B64" | base64 -d > "$CODEX_HOME/auth.json"
+        elif [[ -n "${CODEX_AUTH_JSON:-}" ]]; then
+          printf '%s' "$CODEX_AUTH_JSON" > "$CODEX_HOME/auth.json"
+        else
+          echo "CODEX_AUTH_JSON_B64 or CODEX_AUTH_JSON is required for auth-json mode." >&2
+          exit 1
+        fi
+        node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$CODEX_HOME/auth.json"
+        chmod 600 "$CODEX_HOME/auth.json"
+        if ! grep -Eq '^[[:space:]]*forced_login_method[[:space:]]*=' "$CODEX_HOME/config.toml"; then
+          printf 'forced_login_method="chatgpt"\n' >> "$CODEX_HOME/config.toml"
+        fi
+        echo "CLAWSWEEPER_CODEX_LOGIN_METHOD=chatgpt" >> "$GITHUB_ENV"
+        if [[ "${{ inputs['login-status'] }}" == "true" ]]; then
+          codex login status
+        fi
+
     - name: Reject unknown Codex auth mode
-      if: ${{ inputs['auth-mode'] != 'proxy' && inputs['auth-mode'] != 'login' }}
+      if: ${{ inputs['auth-mode'] != 'proxy' && inputs['auth-mode'] != 'login' && inputs['auth-mode'] != 'auth-json' }}
       shell: bash
       run: |
         echo "Unsupported setup-codex auth-mode: ${{ inputs['auth-mode'] }}" >&2

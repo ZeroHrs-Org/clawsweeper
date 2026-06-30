@@ -58,6 +58,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CLAWSWEEPER_APP_CLIENT_ID: Iv23liOECG0slfuhz093
+  CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' && '1' || '0' }}
   ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN: ${{ secrets.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN }}
   CLAWSWEEPER_MODEL: internal
 
@@ -121,7 +122,7 @@ jobs:
 
       - name: Create GitHub App token
         id: app_token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -133,7 +134,7 @@ jobs:
 
       - name: Create target status token
         id: status_token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -191,9 +192,10 @@ jobs:
       - uses: ./.github/actions/setup-codex
         if: ${{ steps.check_job.outputs.job_exists == '1' }}
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
         with:
+          auth-mode: auth-json
           codex-home: ${{ steps.codex_session.outputs.codex_home }}
 
       - name: Restore Codex session
@@ -403,7 +405,7 @@ jobs:
 
       - name: Create GitHub App token
         id: target_write_token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -417,7 +419,7 @@ jobs:
 
       - name: Create central requeue token
         id: requeue-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -474,9 +476,10 @@ jobs:
       - uses: ./.github/actions/setup-codex
         if: ${{ steps.check_job.outputs.job_exists == '1' }}
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
         with:
+          auth-mode: auth-json
           cache-suffix: target-pnpm
           codex-home: ${{ steps.codex_session.outputs.codex_home }}
 

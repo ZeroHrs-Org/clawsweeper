@@ -148,8 +148,10 @@ jobs:
 
       - uses: ./.github/actions/setup-codex
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
+        with:
+          auth-mode: auth-json
 
       - name: Answer maintainer question
         env:

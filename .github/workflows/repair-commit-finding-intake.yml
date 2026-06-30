@@ -149,9 +149,10 @@ jobs:
       - uses: ./.github/actions/setup-codex
         if: ${{ steps.prepare.outputs.should_repair == 'true' }}
         with:
+          auth-mode: auth-json
           cache-suffix: target-pnpm
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
 
       - name: Review synthetic result

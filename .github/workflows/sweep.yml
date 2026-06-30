@@ -136,6 +136,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CLAWSWEEPER_APP_CLIENT_ID: Iv23liOECG0slfuhz093
+  CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' && '1' || '0' }}
   CLAWSWEEPER_MODEL: internal
   ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN: ${{ secrets.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN }}
 
@@ -338,7 +339,7 @@ jobs:
 
       - name: Create target read token
         id: target-read-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -352,7 +353,7 @@ jobs:
 
       - name: Create target write token
         id: target-write-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -460,9 +461,10 @@ jobs:
 
       - uses: ./.github/actions/setup-codex
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
         with:
+          auth-mode: auth-json
           login-status: "true"
 
       - name: Review exact event item
@@ -793,7 +795,7 @@ jobs:
 
       - name: Create OpenClaw inventory token
         id: openclaw-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -802,7 +804,7 @@ jobs:
 
       - name: Create steipete inventory token
         id: steipete-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -903,7 +905,7 @@ jobs:
 
       - name: Create target read token
         id: target-read-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -1191,7 +1193,7 @@ jobs:
 
       - name: Create target review token
         id: target-read-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -1205,7 +1207,7 @@ jobs:
 
       - name: Create target Codex inspection token
         id: codex-inspection-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -1228,9 +1230,10 @@ jobs:
 
       - uses: ./clawsweeper/.github/actions/setup-codex
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
         with:
+          auth-mode: auth-json
           login-status: "true"
 
       - uses: actions/cache@v5
@@ -1398,7 +1401,7 @@ jobs:
 
       - name: Create target write token
         id: target-write-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -1731,8 +1734,10 @@ jobs:
       - uses: ./.github/actions/setup-codex
         if: ${{ success() && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && github.event.inputs.apply_after_review == 'true' }}
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
+        with:
+          auth-mode: auth-json
 
       - name: Apply selected safe close proposals
         if: ${{ success() && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && github.event.inputs.apply_after_review == 'true' }}
@@ -2017,7 +2022,7 @@ jobs:
 
       - name: Create target read token
         id: target-read-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -2140,7 +2145,7 @@ jobs:
 
       - name: Create target write token
         id: target-write-token
-        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -2257,8 +2262,10 @@ jobs:
       - uses: ./.github/actions/setup-codex
         if: ${{ steps.apply-preselect.outputs.needs_codex == 'true' }}
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
+        with:
+          auth-mode: auth-json
 
       - name: Apply unchanged proposed decisions with checkpoints
         env:
