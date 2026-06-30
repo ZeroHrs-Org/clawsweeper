@@ -939,6 +939,41 @@ test("renderIssueImplementationJob records maintainer build override metadata", 
   assert.doesNotMatch(job.body, /repair_strategy: "new_fix_pr"/);
 });
 
+test("renderIssueImplementationJob keeps soft Execute Plan overrides in the fix PR lane", () => {
+  const raw = renderIssueImplementationJob({
+    repo: "ZeroHrs-Org/zerohrs-app",
+    issueNumber: 260,
+    title: "Mobile feedback issue",
+    commentUrl: "https://github.com/ZeroHrs-Org/zerohrs-app/issues/260#issuecomment-1",
+    author: "zebriot",
+    implementationPrompt: "Use the ZeroHrs Crabbox Android proof job.",
+    operatorOverride: true,
+    overrideRequestedBy: "zebriot",
+    overrideReason: "maintainer requested Execute Plan",
+    overrideBlockerClass: "soft",
+    overrideAction: "try the narrowest useful reviewable PR for this issue",
+  });
+  const match = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  assert.ok(match);
+  const job = {
+    frontmatter: parseSimpleYaml(match[1]),
+    body: match[2].trim(),
+  };
+
+  assert.deepEqual(validateJob(job), []);
+  assert.equal(job.frontmatter.operator_override, true);
+  assert.equal(job.frontmatter.override_requested_by, "zebriot");
+  assert.equal(job.frontmatter.override_reason, "maintainer requested Execute Plan");
+  assert.equal(job.frontmatter.override_blocker_class, "soft");
+  assert.equal(job.frontmatter.allow_fix_pr, true);
+  assert.deepEqual(job.frontmatter.allowed_actions, ["comment", "label", "fix", "raise_pr"]);
+  assert.deepEqual(job.frontmatter.blocked_actions, ["close", "merge"]);
+  assert.match(job.body, /soft blocker/);
+  assert.match(job.body, /repair_strategy: "new_fix_pr"/);
+  assert.match(job.body, /ZeroHrs Crabbox Android proof job/);
+  assert.doesNotMatch(job.body, /do not emit a `new_fix_pr` artifact/);
+});
+
 test("issue implementation blocker classifier treats linked PR evidence as hard", () => {
   assert.equal(issueImplementationBlockerClass("open PR already mentions this issue"), "hard");
   assert.equal(issueImplementationBlockerClass("work cluster references a PR"), "hard");

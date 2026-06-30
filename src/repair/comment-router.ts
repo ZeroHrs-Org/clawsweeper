@@ -2071,7 +2071,6 @@ function issueImplementationOverrideReason(command: LooseRecord) {
 function issueImplementationOverrideBlockerClass(command: LooseRecord) {
   if (command.operator_override !== true) return null;
   const target = command.target ?? {};
-  if (target.kind === "issue" && target.job_path) return "hard";
   if (target.kind === "issue" && issueImplementationLinkedPrSignal(target)) return "hard";
   if (target.kind === "issue" && target.state && target.state !== "open") return "hard";
   if (target.kind === "issue" && target.locked === true) return "hard";

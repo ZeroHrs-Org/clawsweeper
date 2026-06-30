@@ -653,7 +653,7 @@ test("comment router classifies protected issue build overrides as hard", () => 
   const source = readFileSync("src/repair/comment-router.ts", "utf8");
 
   assert.match(source, /issueImplementationOverrideBlockerClass\(command\)/);
-  assert.match(source, /target\.kind === "issue" && target\.job_path/);
+  assert.doesNotMatch(source, /target\.kind === "issue" && target\.job_path/);
   assert.match(source, /issueImplementationLinkedPrSignal\(target\)/);
   assert.match(source, /issueLinkedOpenPrReferences\(issue, issueNumber\)/);
   assert.match(source, /open_prs: linkedOpenPrs/);
