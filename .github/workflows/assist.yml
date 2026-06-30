@@ -54,7 +54,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CLAWSWEEPER_APP_CLIENT_ID: Iv23liOECG0slfuhz093
-  CLAWSWEEPER_MODEL: internal
+  CLAWSWEEPER_MODEL: ${{ secrets.CLAWSWEEPER_MODEL || vars.CLAWSWEEPER_MODEL || 'gpt-5.5' }}
 
 concurrency:
   group: ${{ format('clawsweeper-assist-{0}-{1}-{2}', github.event.client_payload.target_repo || inputs.target_repo || 'openclaw/openclaw', github.event.client_payload.item_number || inputs.item_number || github.run_id, github.event.client_payload.comment_id || inputs.comment_id || github.run_id) }}
@@ -149,7 +149,7 @@ jobs:
       - uses: ./.github/actions/setup-codex
         env:
           CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
-          CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
+          CLAWSWEEPER_INTERNAL_MODEL: ${{ env.CLAWSWEEPER_MODEL }}
         with:
           auth-mode: auth-json
 
@@ -164,7 +164,7 @@ jobs:
           COMMENT_ID: ${{ github.event.client_payload.comment_id || inputs.comment_id || '' }}
           COMMENT_URL: ${{ github.event.client_payload.comment_url || inputs.comment_url || '' }}
           AUTHOR: ${{ github.event.client_payload.author || inputs.author || '' }}
-          MODEL: internal
+          MODEL: ${{ env.CLAWSWEEPER_MODEL }}
           REASONING_EFFORT: ${{ github.event.client_payload.assist.reasoning_effort || github.event.client_payload.reasoning_effort || 'low' }}
           TIMEOUT_MS: ${{ github.event.client_payload.assist.timeout_ms || github.event.client_payload.timeout_ms || '120000' }}
         run: |

@@ -50,9 +50,9 @@ on:
         default: blacksmith-16vcpu-ubuntu-2404
         type: string
       model:
-        description: "Internal Codex model alias"
+        description: "Codex model"
         required: false
-        default: internal
+        default: gpt-5.5
         type: string
 
 permissions:
@@ -67,7 +67,7 @@ env:
   CLAWSWEEPER_ALLOW_EXECUTE: ${{ vars.CLAWSWEEPER_ALLOW_EXECUTE == '1' && '1' || '0' }}
   CLAWSWEEPER_ALLOW_FIX_PR: ${{ vars.CLAWSWEEPER_ALLOW_FIX_PR == '1' && '1' || '0' }}
   CLAWSWEEPER_ALLOW_MERGE: "0"
-  CLAWSWEEPER_MODEL: internal
+  CLAWSWEEPER_MODEL: ${{ secrets.CLAWSWEEPER_MODEL || vars.CLAWSWEEPER_MODEL || 'gpt-5.5' }}
   CLAWSWEEPER_CODEX_REASONING_EFFORT: ${{ vars.CLAWSWEEPER_CODEX_REASONING_EFFORT || 'high' }}
   CLAWSWEEPER_GIT_USER_NAME: ${{ vars.CLAWSWEEPER_GIT_USER_NAME || 'clawsweeper[bot]' }}
   CLAWSWEEPER_GIT_USER_EMAIL: ${{ vars.CLAWSWEEPER_GIT_USER_EMAIL || '274271284+clawsweeper[bot]@users.noreply.github.com' }}
@@ -238,7 +238,7 @@ jobs:
           MAX_LIVE_WORKERS: ${{ vars.CLAWSWEEPER_AUTO_IMPLEMENT_MAX_LIVE_WORKERS || '' }}
           RUNNER: ${{ github.event.inputs.runner || github.event.client_payload.runner || vars.CLAWSWEEPER_WORKER_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
           EXECUTION_RUNNER: ${{ github.event.inputs.execution_runner || github.event.client_payload.execution_runner || vars.CLAWSWEEPER_EXECUTION_RUNNER || 'blacksmith-16vcpu-ubuntu-2404' }}
-          MODEL: internal
+          MODEL: ${{ github.event.inputs.model || github.event.client_payload.model || env.CLAWSWEEPER_MODEL }}
         run: |
           set -euo pipefail
           cap_args=()

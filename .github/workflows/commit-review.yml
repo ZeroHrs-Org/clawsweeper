@@ -40,7 +40,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CLAWSWEEPER_APP_CLIENT_ID: Iv23liOECG0slfuhz093
-  CLAWSWEEPER_MODEL: internal
+  CLAWSWEEPER_MODEL: ${{ secrets.CLAWSWEEPER_MODEL || vars.CLAWSWEEPER_MODEL || 'gpt-5.5' }}
 
 concurrency:
   group: commit-review-${{ github.event.inputs.target_repo || github.event.client_payload.target_repo || 'openclaw/openclaw' }}-${{ github.event.inputs.commit_sha || github.event.client_payload.after_sha || github.event.client_payload.commit_sha || github.run_id }}
@@ -375,7 +375,7 @@ jobs:
       - uses: ./clawsweeper/.github/actions/setup-codex
         env:
           CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
-          CLAWSWEEPER_INTERNAL_MODEL: ${{ secrets.CLAWSWEEPER_MODEL }}
+          CLAWSWEEPER_INTERNAL_MODEL: ${{ env.CLAWSWEEPER_MODEL }}
         with:
           auth-mode: auth-json
           login-status: "true"
@@ -417,7 +417,7 @@ jobs:
             --report-dir ../commit-artifacts \
             --artifact-mode \
             --work-dir ../commit-work \
-            --codex-model internal \
+            --codex-model "$CLAWSWEEPER_MODEL" \
             --codex-reasoning-effort high \
             --codex-sandbox danger-full-access \
             --codex-timeout-ms 1800000
