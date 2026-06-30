@@ -18,7 +18,7 @@ inputs:
   repository:
     description: State repository name.
     required: false
-    default: clawsweeper-state
+    default: clawsweeper-state-private
 outputs:
   token:
     description: GitHub App installation token for the state repository.
