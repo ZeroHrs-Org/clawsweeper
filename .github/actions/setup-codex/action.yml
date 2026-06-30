@@ -8,8 +8,8 @@ inputs:
     description: Exact Codex Responses proxy npm package version.
     default: "0.139.0"
   auth-mode:
-    description: Authentication mode. Use auth-json for Codex/ChatGPT auth, proxy to keep OPENAI_API_KEY out of Codex subprocesses, or login for legacy codex login.
-    default: "proxy"
+    description: Authentication mode. Defaults to Codex/ChatGPT auth.json; proxy and login are legacy API-key modes.
+    default: "auth-json"
   codex-home:
     description: CODEX_HOME directory. Defaults to an isolated per-run ClawSweeper directory.
     default: ""

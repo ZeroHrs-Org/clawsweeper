@@ -978,8 +978,14 @@ test("issue implementation workflow lets job intent choose dispatch capacity", (
   assert.doesNotMatch(workflow, /worker-limit issue_implementation/);
   assert.match(workflow, /owner: \$\{\{ steps\.target\.outputs\.target_owner \}\}/);
   assert.match(workflow, /id: dispatch-token/);
-  assert.match(workflow, /GH_TOKEN: \$\{\{ steps\.dispatch-token\.outputs\.token \}\}/);
-  assert.match(workflow, /MODEL: internal/);
+  assert.match(
+    workflow,
+    /GH_TOKEN: \$\{\{ steps\.dispatch-token\.outputs\.token \|\| github\.token \}\}/,
+  );
+  assert.match(
+    workflow,
+    /MODEL: \$\{\{ github\.event\.inputs\.model \|\| github\.event\.client_payload\.model \|\| env\.CLAWSWEEPER_MODEL \}\}/,
+  );
   assert.match(workflow, /echo "target_slug=\$target_slug"/);
   assert.match(workflow, /sed -E 's\/\[\^a-z0-9_\.-\]\+\/-\/g;/);
   assert.match(
@@ -1125,14 +1131,23 @@ test("Codex workflows install pinned CLI releases and keep the model secret", ()
 
   assert.match(action, /codex-version:[\s\S]*default: "0\.139\.0"/);
   assert.match(action, /proxy-version:[\s\S]*default: "0\.139\.0"/);
+  assert.match(action, /auth-mode:[\s\S]*default: "auth-json"/);
   assert.match(action, /@openai\/codex@\$\{\{ inputs\['codex-version'\] \}\}/);
   assert.match(action, /@openai\/codex-responses-api-proxy@\$\{\{ inputs\['proxy-version'\] \}\}/);
   assert.doesNotMatch(action, /@latest/);
   assert.match(action, /env -u OPENAI_API_KEY[\s\S]*-u CLAWSWEEPER_INTERNAL_MODEL/);
   assert.equal(action.match(/--ignore-scripts/g)?.length, 2);
   for (const workflow of workflows) {
-    assert.match(workflow, /CLAWSWEEPER_MODEL: internal/);
-    assert.match(workflow, /CLAWSWEEPER_INTERNAL_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \}\}/);
+    assert.match(
+      workflow,
+      /CLAWSWEEPER_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \|\| vars\.CLAWSWEEPER_MODEL \|\| 'gpt-5\.5' \}\}/,
+    );
+    assert.match(workflow, /CODEX_AUTH_JSON_B64: \$\{\{ secrets\.CODEX_AUTH_JSON_B64 \}\}/);
+    assert.match(
+      workflow,
+      /CLAWSWEEPER_INTERNAL_MODEL: \$\{\{ (?:inputs\.model \|\| )?env\.CLAWSWEEPER_MODEL \}\}/,
+    );
+    assert.match(workflow, /auth-mode: auth-json/);
     assert.doesNotMatch(workflow, /CLAWSWEEPER_CODEX_CLI_VERSION/);
     for (const line of workflow
       .split("\n")
@@ -1434,8 +1449,8 @@ test("review parser strips environment access caveats from risks", () => {
   assert.deepEqual(parsed.risks, ["A real product uncertainty remains."]);
 });
 
-test("Codex login method defaults to API and accepts explicit local OAuth", () => {
-  assert.equal(codexLoginMethod(""), "api");
+test("Codex login method defaults to ChatGPT auth and accepts explicit API auth", () => {
+  assert.equal(codexLoginMethod(""), "chatgpt");
   assert.equal(codexLoginMethod(" API "), "api");
   assert.equal(codexLoginMethod(" chatgpt "), "chatgpt");
   assert.equal(codexLoginConfig("chatgpt"), 'forced_login_method="chatgpt"');
@@ -1445,7 +1460,7 @@ test("Codex login method reads the environment without leaking test state", () =
   const original = process.env.CLAWSWEEPER_CODEX_LOGIN_METHOD;
   try {
     delete process.env.CLAWSWEEPER_CODEX_LOGIN_METHOD;
-    assert.equal(codexLoginMethod(), "api");
+    assert.equal(codexLoginMethod(), "chatgpt");
     process.env.CLAWSWEEPER_CODEX_LOGIN_METHOD = "chatgpt";
     assert.equal(codexLoginMethod(), "chatgpt");
   } finally {

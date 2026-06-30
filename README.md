@@ -598,21 +598,17 @@ Read the report at `artifacts/local-review-<number>/<number>.md`. Key fields are
 intentionally want to move reports into durable state or sync GitHub comments.
 Add `--verbose` when you need the underlying `[review]` diagnostic logs.
 
-If you prefer API-key auth, keep the key out of the repository and shell
-history. For POSIX shells:
+For local runs, sign in once with the Codex CLI using your Codex/ChatGPT
+account:
 
 ```sh
-printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key -c 'service_tier="fast"'
-unset OPENAI_API_KEY
+codex login
+export CLAWSWEEPER_CODEX_LOGIN_METHOD=chatgpt
 ```
 
-For PowerShell:
-
-```powershell
-$env:OPENAI_API_KEY = Read-Host "OpenAI API key"
-$env:OPENAI_API_KEY | codex login --with-api-key -c 'service_tier="fast"'
-Remove-Item Env:OPENAI_API_KEY
-```
+API-key auth is a legacy fallback. Use it only by explicitly selecting the
+`setup-codex` action's `proxy` or `login` auth mode, and keep the key out of the
+repository and shell history.
 
 `--local-only` preserves local Codex auth environment variables only for that
 advisory local run. Normal production review workers still strip Codex, OpenAI,
@@ -730,9 +726,10 @@ full compiled-repo coverage ratchet.
 
 Required secrets:
 
-- `OPENAI_API_KEY`: OpenAI API key used by the per-job local Codex Responses
-  proxy. Codex subprocesses inherit only the proxy-backed `CODEX_HOME`, not the
-  raw API key.
+- `CODEX_AUTH_JSON_B64`: base64-encoded Codex CLI `auth.json` from a
+  Codex/ChatGPT account. Workflows write it into an isolated per-run
+  `CODEX_HOME`, set `forced_login_method="chatgpt"`, and do not require an
+  OpenAI API key for Codex.
 - `CLAWSWEEPER_APP_CLIENT_ID`: public GitHub App client ID for `clawsweeper`.
   Currently `Iv23liOECG0slfuhz093`.
 - `CLAWSWEEPER_APP_PRIVATE_KEY`: private key for `clawsweeper`; plan/review
@@ -747,8 +744,8 @@ Required secrets:
 Token flow:
 
 - Review jobs create an isolated per-run `CODEX_HOME`; steerable repair jobs
-  use a stable per-work cache path. Both start a local Responses proxy from
-  `OPENAI_API_KEY`, write proxy-only Codex config there, and run Codex without
+  use a stable per-work cache path. Both write Codex `auth.json` from
+  `CODEX_AUTH_JSON_B64`, force ChatGPT login mode, and run Codex without raw
   OpenAI or Codex token environment variables.
 - Steerable repair jobs cache only the app-server `sessions/` directory and
   ClawSweeper thread-id file. Planning and execution resume the same logical

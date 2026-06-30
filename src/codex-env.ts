@@ -15,7 +15,7 @@ export function codexLoginMethod(
   value = process.env.CLAWSWEEPER_CODEX_LOGIN_METHOD,
 ): CodexLoginMethod {
   const normalized = value?.trim().toLowerCase();
-  if (!normalized) return "api";
+  if (!normalized) return "chatgpt";
   if (normalized === "api" || normalized === "chatgpt") return normalized;
   throw new Error(`Invalid CLAWSWEEPER_CODEX_LOGIN_METHOD: ${value}. Expected "api" or "chatgpt".`);
 }

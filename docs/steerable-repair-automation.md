@@ -517,11 +517,12 @@ CrabFleet returns:
 The runner credential is masked in GitHub Actions logs. Browser viewers never
 receive the service token or agent token.
 
-### OpenAI Credentials
+### Codex Auth
 
-The workflow starts a local Responses proxy from `OPENAI_API_KEY`, creates
-proxy-only Codex configuration in the isolated `CODEX_HOME`, and runs Codex
-without raw OpenAI or Codex token environment variables.
+The workflow writes `CODEX_AUTH_JSON_B64` into an isolated `CODEX_HOME`, creates
+ChatGPT-login Codex configuration, and runs Codex without raw OpenAI or Codex
+token environment variables. The legacy API-key proxy remains available only for
+explicit local experiments with `auth-mode: proxy` or `auth-mode: login`.
 
 ## Parallelization and Capacity
 
