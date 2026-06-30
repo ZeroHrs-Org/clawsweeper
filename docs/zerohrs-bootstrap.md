@@ -16,6 +16,11 @@ The token needs enough scope to dispatch workflows in this repository and, for t
 
 ZeroHrs mobile feedback proof should use the target repo's `android-proof` Crabbox job on the static Hetzner SSH host.
 
+Android proof may sign in with the public ZeroHrs test account:
+
+- `sid@zerohrs.com`
+- `Cooking@9098`
+
 Expected target repo artifacts:
 
 - `reports/crabbox-android/proof-manifest.json`
