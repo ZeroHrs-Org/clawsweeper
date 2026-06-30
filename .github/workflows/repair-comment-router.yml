@@ -72,6 +72,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CLAWSWEEPER_APP_CLIENT_ID: Iv23liOECG0slfuhz093
+  ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN: ${{ secrets.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN }}
 
 concurrency:
   group: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.comment_id && format('repair-comment-router-{0}-comment-{1}', github.event.client_payload.target_repo || 'openclaw/openclaw', github.event.client_payload.comment_id) || format('repair-comment-router-{0}', github.event.inputs.target_repo || github.event.client_payload.target_repo || 'openclaw/openclaw') }}
@@ -129,6 +130,7 @@ jobs:
 
       - name: Create target GitHub App token
         id: app_token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -142,6 +144,7 @@ jobs:
 
       - name: Create central dispatch token
         id: dispatch-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -157,6 +160,7 @@ jobs:
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
           private-key: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
+          fallback-token: ${{ env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN }}
 
       - uses: ./.github/actions/setup-state
         with:
@@ -169,8 +173,8 @@ jobs:
 
       - name: Route ClawSweeper comments
         env:
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
-          CLAWSWEEPER_DISPATCH_TOKEN: ${{ steps.dispatch-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
+          CLAWSWEEPER_DISPATCH_TOKEN: ${{ steps.dispatch-token.outputs.token || github.token }}
           CLAWSWEEPER_MUTATION_TOKEN_SOURCE: clawsweeper-app
           CLAWSWEEPER_ALLOW_MERGE: ${{ vars.CLAWSWEEPER_ALLOW_MERGE || '0' }}
         run: |
@@ -257,8 +261,8 @@ jobs:
       - name: Retry waiting repair dispatches
         if: ${{ steps.waiting-repair-dispatches.outputs.count != '' && steps.waiting-repair-dispatches.outputs.count != '0' }}
         env:
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
-          CLAWSWEEPER_DISPATCH_TOKEN: ${{ steps.dispatch-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
+          CLAWSWEEPER_DISPATCH_TOKEN: ${{ steps.dispatch-token.outputs.token || github.token }}
           CLAWSWEEPER_MUTATION_TOKEN_SOURCE: clawsweeper-app
           CLAWSWEEPER_ALLOW_MERGE: ${{ vars.CLAWSWEEPER_ALLOW_MERGE || '0' }}
         run: |

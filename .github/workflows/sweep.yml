@@ -338,6 +338,7 @@ jobs:
 
       - name: Create target read token
         id: target-read-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -351,6 +352,7 @@ jobs:
 
       - name: Create target write token
         id: target-write-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -791,6 +793,7 @@ jobs:
 
       - name: Create OpenClaw inventory token
         id: openclaw-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -799,6 +802,7 @@ jobs:
 
       - name: Create steipete inventory token
         id: steipete-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -899,6 +903,7 @@ jobs:
 
       - name: Create target read token
         id: target-read-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -1186,6 +1191,7 @@ jobs:
 
       - name: Create target review token
         id: target-read-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -1199,6 +1205,7 @@ jobs:
 
       - name: Create target Codex inspection token
         id: codex-inspection-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -1391,6 +1398,7 @@ jobs:
 
       - name: Create target write token
         id: target-write-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -1470,7 +1478,7 @@ jobs:
       - name: Commit review records
         env:
           EXACT_ITEM: ${{ github.event.client_payload.item_number || github.event.inputs.item_number || github.event.inputs.item_numbers || '' }}
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           HOT_INTAKE: ${{ needs.plan.outputs.hot_intake }}
           TARGET_REPO: ${{ needs.plan.outputs.target_repo }}
         run: |
@@ -2009,6 +2017,7 @@ jobs:
 
       - name: Create target read token
         id: target-read-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
@@ -2131,6 +2140,7 @@ jobs:
 
       - name: Create target write token
         id: target-write-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:

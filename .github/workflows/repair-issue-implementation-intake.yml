@@ -62,6 +62,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CLAWSWEEPER_APP_CLIENT_ID: Iv23liOECG0slfuhz093
+  ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN: ${{ secrets.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN }}
   CLAWSWEEPER_ALLOW_EXECUTE: ${{ vars.CLAWSWEEPER_ALLOW_EXECUTE == '1' && '1' || '0' }}
   CLAWSWEEPER_ALLOW_FIX_PR: ${{ vars.CLAWSWEEPER_ALLOW_FIX_PR == '1' && '1' || '0' }}
   CLAWSWEEPER_ALLOW_MERGE: "0"
@@ -121,6 +122,7 @@ jobs:
 
       - name: Create target read token
         id: target-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -133,6 +135,7 @@ jobs:
 
       - name: Create target status token
         id: target-status-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -143,6 +146,7 @@ jobs:
 
       - name: Create central dispatch token
         id: dispatch-token
+        if: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
@@ -158,6 +162,7 @@ jobs:
         with:
           client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
           private-key: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
+          fallback-token: ${{ env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN }}
 
       - uses: ./.github/actions/setup-state
         with:
@@ -171,7 +176,7 @@ jobs:
       - name: Prepare issue implementation intake
         id: prepare
         env:
-          GH_TOKEN: ${{ steps.target-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           ENABLED: ${{ github.event.inputs.enabled || github.event.client_payload.enabled || vars.CLAWSWEEPER_AUTO_IMPLEMENT_REPRO_BUGS || 'false' }}
           TARGET_REPO: ${{ github.event.inputs.target_repo || github.event.client_payload.target_repo || 'openclaw/openclaw' }}
           ITEM_NUMBER: ${{ github.event.inputs.item_number || github.event.client_payload.item_number }}
@@ -215,7 +220,7 @@ jobs:
         if: ${{ steps.prepare.outputs.should_repair == 'true' }}
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ steps.target-status-token.outputs.token }}
+          GH_TOKEN: ${{ steps.target-status-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_STATUS_INGEST_TOKEN: ${{ secrets.CLAWSWEEPER_STATUS_INGEST_TOKEN }}
         run: |
           pnpm run repair:issue-implementation-status -- \
@@ -228,7 +233,7 @@ jobs:
       - name: Dispatch repair worker
         if: ${{ steps.prepare.outputs.should_repair == 'true' }}
         env:
-          GH_TOKEN: ${{ steps.dispatch-token.outputs.token }}
+          GH_TOKEN: ${{ steps.dispatch-token.outputs.token || github.token }}
           MAX_LIVE_WORKERS: ${{ vars.CLAWSWEEPER_AUTO_IMPLEMENT_MAX_LIVE_WORKERS || '' }}
           RUNNER: ${{ github.event.inputs.runner || github.event.client_payload.runner || vars.CLAWSWEEPER_WORKER_RUNNER || 'blacksmith-4vcpu-ubuntu-2404' }}
           EXECUTION_RUNNER: ${{ github.event.inputs.execution_runner || github.event.client_payload.execution_runner || vars.CLAWSWEEPER_EXECUTION_RUNNER || 'blacksmith-16vcpu-ubuntu-2404' }}
