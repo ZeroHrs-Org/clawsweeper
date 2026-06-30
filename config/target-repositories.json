@@ -2,6 +2,23 @@
   "schema_version": 2,
   "repositories": [
     {
+      "target_repo": "ZeroHrs-Org/zerohrs-app",
+      "display_name": "ZeroHrs",
+      "checkout_dir": "zerohrs-app",
+      "community_url": "https://zerohrs.com/",
+      "prompt_note": "Use the ZeroHrs monorepo source tree and current main branch. Feedback-created issues come from mobile users and should be reviewed conservatively: verify the issue against current code, prefer Android Crabbox proof for mobile UI/runtime claims, keep issues open unless current main clearly implements the requested behavior, and create implementation PRs only after a maintainer command.",
+      "apply_close_rules": {
+        "issue": ["implemented_on_main"],
+        "pull_request": ["implemented_on_main", "mostly_implemented_on_main"]
+      },
+      "package_manager": "pnpm",
+      "validation_commands": ["pnpm run diff:checks"],
+      "changed_gate": {
+        "command": "pnpm run diff:checks",
+        "required_script": "diff:checks"
+      }
+    },
+    {
       "target_repo": "openclaw/clawhub",
       "display_name": "ClawHub",
       "checkout_dir": "clawhub",
@@ -47,6 +64,19 @@
   ],
   "generic_fallbacks": [
     {
+      "owner": "ZeroHrs-Org",
+      "deny_repositories": [],
+      "allow_repo_name_pattern": "^[A-Za-z0-9_.-]+$",
+      "prompt_note": "Use the {target_repo} source tree and current default branch. This repository is using the generic ZeroHrs onboarding profile, so review conservatively, prefer source-backed and Crabbox-backed evidence, and do not auto-close issues unless current main clearly implements the requested behavior.",
+      "apply_close_rules": {
+        "issue": ["implemented_on_main"],
+        "pull_request": ["implemented_on_main"]
+      },
+      "package_manager": "pnpm",
+      "validation_commands": ["pnpm run diff:checks"],
+      "changed_gate": null
+    },
+    {
       "owner": "openclaw",
       "deny_repositories": ["openclaw/clawsweeper-state", "openclaw/.github"],
       "allow_repo_name_pattern": "^[A-Za-z0-9_.-]+$",
@@ -84,7 +114,7 @@
     }
   },
   "target_inventory": {
-    "owners": ["openclaw", "steipete"],
+    "owners": ["ZeroHrs-Org", "openclaw", "steipete"],
     "deny_repositories": ["openclaw/clawsweeper-state", "openclaw/.github"],
     "include_private": false,
     "include_archived": false,
