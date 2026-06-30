@@ -176,7 +176,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_DISPATCH_TOKEN: ${{ steps.dispatch-token.outputs.token || github.token }}
-          CLAWSWEEPER_MUTATION_TOKEN_SOURCE: clawsweeper-app
+          CLAWSWEEPER_MUTATION_TOKEN_SOURCE: ${{ steps.app_token.outputs.token != '' && 'clawsweeper-app' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '' && 'zerohrs-pat-bootstrap' || 'github-token' }}
           CLAWSWEEPER_ALLOW_MERGE: ${{ vars.CLAWSWEEPER_ALLOW_MERGE || '0' }}
         run: |
           set -euo pipefail
@@ -264,7 +264,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_DISPATCH_TOKEN: ${{ steps.dispatch-token.outputs.token || github.token }}
-          CLAWSWEEPER_MUTATION_TOKEN_SOURCE: clawsweeper-app
+          CLAWSWEEPER_MUTATION_TOKEN_SOURCE: ${{ steps.app_token.outputs.token != '' && 'clawsweeper-app' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '' && 'zerohrs-pat-bootstrap' || 'github-token' }}
           CLAWSWEEPER_ALLOW_MERGE: ${{ vars.CLAWSWEEPER_ALLOW_MERGE || '0' }}
         run: |
           set -euo pipefail

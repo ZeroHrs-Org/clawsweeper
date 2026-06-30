@@ -686,8 +686,8 @@ jobs:
         id: requeue_dispatch
         if: ${{ always() && steps.repair_requeue.outputs.count != '' && steps.repair_requeue.outputs.count != '0' }}
         env:
-          GH_TOKEN: ${{ steps.requeue-token.outputs.token || github.token }}
-          CLAWSWEEPER_MUTATION_TOKEN_SOURCE: clawsweeper-app
+          GH_TOKEN: ${{ steps.requeue-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
+          CLAWSWEEPER_MUTATION_TOKEN_SOURCE: ${{ steps.requeue-token.outputs.token != '' && 'clawsweeper-app' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '' && 'zerohrs-pat-bootstrap' || 'github-token' }}
         run: |
           set -euo pipefail
           echo "Requeueing ${{ steps.repair_requeue.outputs.count }} source-head race repair result(s) against the latest head."

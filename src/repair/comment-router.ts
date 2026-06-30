@@ -340,13 +340,22 @@ function assertMutationActorIsClawsweeperBot() {
     const viewer = ghJson<LooseRecord>(["api", "user"]);
     const login = String(viewer.login ?? "");
     if (isAllowedMutationActor(login, trustedBots)) return;
+    if (isZeroHrsPatBootstrapMutationActor(login)) return;
     throw new Error(
-      `refusing to execute ClawSweeper comment-router mutations as ${login || "unknown actor"}; set GH_TOKEN to the Clawsweeper GitHub App installation token`,
+      `refusing to execute ClawSweeper comment-router mutations as ${login || "unknown actor"}; set GH_TOKEN to the Clawsweeper GitHub App installation token or the explicit ZeroHrs PAT bootstrap source`,
     );
   } catch (error) {
     if (isExpectedGitHubAppIntegrationToken(error)) return;
     throw error;
   }
+}
+
+function isZeroHrsPatBootstrapMutationActor(login: string) {
+  if (!login.trim()) return false;
+  return (
+    process.env.CLAWSWEEPER_MUTATION_TOKEN_SOURCE === "zerohrs-pat-bootstrap" &&
+    Boolean(process.env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN?.trim())
+  );
 }
 
 function isExpectedGitHubAppIntegrationToken(error: unknown) {
