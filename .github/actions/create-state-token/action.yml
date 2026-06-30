@@ -3,14 +3,18 @@ description: Mint a GitHub App token for the generated state repository.
 inputs:
   client-id:
     description: GitHub App client ID.
-    required: true
+    required: false
   private-key:
-    description: GitHub App private key.
-    required: true
+    description: GitHub App private key. When omitted, fallback-token is used.
+    required: false
+  fallback-token:
+    description: Fine-scoped GitHub token used for ZeroHrs PAT bootstrap mode.
+    required: false
+    default: ""
   owner:
     description: State repository owner.
     required: false
-    default: openclaw
+    default: ZeroHrs-Org
   repository:
     description: State repository name.
     required: false
@@ -18,11 +22,12 @@ inputs:
 outputs:
   token:
     description: GitHub App installation token for the state repository.
-    value: ${{ steps.state-token.outputs.token }}
+    value: ${{ steps.state-token.outputs.token || steps.fallback-token.outputs.token }}
 runs:
   using: composite
   steps:
     - name: Create state repository token
+      if: ${{ inputs.private-key != '' }}
       id: state-token
       uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
       with:
@@ -32,3 +37,21 @@ runs:
         repositories: ${{ inputs.repository }}
         permission-actions: write
         permission-contents: write
+
+    - name: Use fallback state token
+      if: ${{ inputs.private-key == '' && inputs.fallback-token != '' }}
+      id: fallback-token
+      shell: bash
+      env:
+        FALLBACK_TOKEN: ${{ inputs.fallback-token }}
+      run: |
+        set -euo pipefail
+        echo "::add-mask::$FALLBACK_TOKEN"
+        echo "token=$FALLBACK_TOKEN" >> "$GITHUB_OUTPUT"
+
+    - name: Require state token
+      if: ${{ inputs.private-key == '' && inputs.fallback-token == '' }}
+      shell: bash
+      run: |
+        echo "CLAWSWEEPER_APP_PRIVATE_KEY or fallback-token is required." >&2
+        exit 1

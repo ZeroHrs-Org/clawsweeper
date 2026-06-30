@@ -4,6 +4,10 @@ inputs:
   token:
     description: GitHub token with contents read/write access to the state repo.
     required: true
+  repository:
+    description: State repository to checkout.
+    required: false
+    default: ZeroHrs-Org/clawsweeper-state
   state-path:
     description: Checkout path for the generated state repository.
     required: false
@@ -33,7 +37,7 @@ runs:
   steps:
     - uses: actions/checkout@v6
       with:
-        repository: openclaw/clawsweeper-state
+        repository: ${{ inputs.repository }}
         ref: state
         path: ${{ inputs.state-path }}
         token: ${{ inputs.token }}
