@@ -37,6 +37,9 @@ test("ZeroHrs feedback profile treats maintainer-authored reports as external fe
   assert.match(profile.promptNote, /GitHub issue author is a ZeroHrs maintainer/);
   assert.match(profile.promptNote, /prefer Android Crabbox proof/);
   assert.match(profile.promptNote, /test credentials from configured secrets/);
+  assert.match(profile.promptNote, /ZEROHRS_TEST_EMAIL/);
+  assert.match(profile.promptNote, /ZEROHRS_TEST_PASSWORD/);
+  assert.match(profile.promptNote, /without printing or committing their raw values/);
   assert.doesNotMatch(profile.promptNote, /public ZeroHrs test account/);
   assert.match(
     profile.promptNote,

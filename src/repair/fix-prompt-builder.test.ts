@@ -111,6 +111,9 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
 
   assert.match(prompt, /ZeroHrs mobile feedback proof/);
   assert.match(prompt, /executor agent owns issue-specific Android verification/);
+  assert.match(prompt, /ZEROHRS_TEST_EMAIL/);
+  assert.match(prompt, /ZEROHRS_TEST_PASSWORD/);
+  assert.match(prompt, /do not print or commit their raw values/);
   assert.match(prompt, /do not hardcode one issue's navigation/);
   assert.match(prompt, /proof harness files are protected infrastructure/);
   assert.match(prompt, /inside the target checkout before returning/);
