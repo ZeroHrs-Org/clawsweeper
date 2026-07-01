@@ -171,7 +171,7 @@ const codexHeartbeatMs = Math.max(
   Number(process.env.CLAWSWEEPER_CODEX_HEARTBEAT_MS ?? 60_000),
 );
 const maxEditAttempts = Math.max(1, Number(process.env.CLAWSWEEPER_FIX_EDIT_ATTEMPTS ?? 3));
-const maxReviewAttempts = Math.max(1, Number(process.env.CLAWSWEEPER_CODEX_REVIEW_ATTEMPTS ?? 4));
+const maxReviewAttempts = Math.max(0, Number(process.env.CLAWSWEEPER_CODEX_REVIEW_ATTEMPTS ?? 4));
 const resolveReviewThreads = process.env.CLAWSWEEPER_RESOLVE_REVIEW_THREADS !== "0";
 const skipCodexWritePreflight = process.env.CLAWSWEEPER_SKIP_CODEX_WRITE_PREFLIGHT === "1";
 const allowExpensiveValidation = process.env.CLAWSWEEPER_ALLOW_EXPENSIVE_VALIDATION === "1";
@@ -2696,6 +2696,33 @@ function validateAndReviewLoop({
 }: LooseRecord) {
   let lastReview = null;
   let validationCommands: LooseRecord[] = [];
+  if (maxReviewAttempts === 0) {
+    const validationPlan = repairDeltaValidationPlan(
+      { fixArtifact, targetDir, sourceHead },
+      currentTargetValidationOptions(),
+    );
+    validationCommands = runAllowedValidationCommands(
+      validationPlan.commands,
+      targetDir,
+      validationPlan.options,
+      baseBranch,
+    );
+    runDiffCheck({ targetDir, baseBranch });
+    return {
+      status: "validation_only",
+      summary:
+        "Changed-surface validation passed; internal Codex /review is disabled for this repair lane.",
+      findings: [],
+      findings_addressed: true,
+      evidence: [
+        "Changed-surface validation passed.",
+        "Internal Codex /review skipped because CLAWSWEEPER_CODEX_REVIEW_ATTEMPTS=0.",
+        "Pull request checks and maintainer review continue after the branch push.",
+      ],
+      validation_commands_run: validationCommands,
+      internal_codex_review: "disabled",
+    };
+  }
   for (let attempt = 1; attempt <= maxReviewAttempts; attempt += 1) {
     const validationPlan = repairDeltaValidationPlan(
       { fixArtifact, targetDir, sourceHead },
@@ -3129,6 +3156,7 @@ function buildMergePreflight({ fixArtifact, codexReview }: LooseRecord) {
   const validationCommands = codexReview.validation_commands_run?.length
     ? codexReview.validation_commands_run
     : fixArtifact.validation_commands;
+  const codexReviewSkipped = codexReview.internal_codex_review === "disabled";
   return {
     target: null,
     security_status: "cleared",
@@ -3145,7 +3173,7 @@ function buildMergePreflight({ fixArtifact, codexReview }: LooseRecord) {
     ],
     codex_review: {
       command: "/review",
-      status: codexReview.status === "clean" ? "clean" : "passed",
+      status: codexReviewSkipped ? "skipped" : codexReview.status === "clean" ? "clean" : "passed",
       findings_addressed: true,
       evidence: codexReview.evidence?.length
         ? codexReview.evidence

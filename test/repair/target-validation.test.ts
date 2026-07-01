@@ -679,6 +679,15 @@ test("repair execution provisions pinned Bun before target validation can invoke
   assert.match(setupBunStep, /bun-version: 1\.3\.10/);
 });
 
+test("ZeroHrs repair execution defaults to validation-only internal review", () => {
+  const workflow = fs.readFileSync(".github/workflows/repair-cluster-worker.yml", "utf8");
+
+  assert.match(
+    workflow,
+    /CLAWSWEEPER_CODEX_REVIEW_ATTEMPTS: \$\{\{ vars\.CLAWSWEEPER_CODEX_REVIEW_ATTEMPTS \|\| \(github\.repository_owner == 'ZeroHrs-Org' && '0' \|\| '4'\) \}\}/,
+  );
+});
+
 test("bun-based target toolchain installs deps and runs configured validation", () => {
   const cwd = gitBunPackageFixture({ check: "bun x tsc --noEmit" });
   git(cwd, "add", ".");

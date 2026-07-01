@@ -178,3 +178,22 @@ test("issue implementation rechecks opt-out labels immediately before branch pus
   assert.match(source.slice(helperStart, helperEnd), /repairPauseLabel\(issue\.labels\)/);
   assert.match(source.slice(helperStart, helperEnd), /refusing to push or open a PR/);
 });
+
+test("repair executor can skip internal Codex review after validation", () => {
+  const source = fs.readFileSync(
+    path.join(process.cwd(), "src/repair/execute-fix-artifact.ts"),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /Math\.max\(0, Number\(process\.env\.CLAWSWEEPER_CODEX_REVIEW_ATTEMPTS \?\? 4\)\)/,
+  );
+  assert.match(source, /if \(maxReviewAttempts === 0\) \{/);
+  assert.match(source, /status: "validation_only"/);
+  assert.match(
+    source,
+    /Internal Codex \/review skipped because CLAWSWEEPER_CODEX_REVIEW_ATTEMPTS=0\./,
+  );
+  assert.match(source, /codexReviewSkipped \? "skipped"/);
+});
