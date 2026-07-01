@@ -48,6 +48,7 @@ const ZEROHRS_VALIDATION_ENV_DEFAULTS: Record<string, string> = {
   GOOGLE_WEB_CLIENT_ID: "zerohrs-validation-web-client-id",
   JWT_SECRET: "clawsweeper-validation-jwt-secret-minimum-32-characters",
   NODE_ENV: "test",
+  OPENCLAW_DEFAULT_MODEL: "gpt-5.4",
   PUBLIC_API_BASE_URL: "http://127.0.0.1:8080",
   RECALL_API_KEY: "clawsweeper-validation-recall-key",
   RECALL_WORKSPACE_VERIFICATION_SECRET: "clawsweeper-validation-recall-secret",

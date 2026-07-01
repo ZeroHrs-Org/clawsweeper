@@ -130,6 +130,14 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /before\.mp4/);
   assert.match(prompt, /after-loading\.png/);
   assert.match(prompt, /after\.mp4/);
+  assert.match(prompt, /if Expo Dev Launcher is visible/);
+  assert.match(prompt, /launcher_screen_detected: false/);
+  assert.match(prompt, /manifest `status` to `blocked`/);
+  assert.match(prompt, /keep the Codex edit pass narrow/);
+  assert.match(
+    prompt,
+    /do not spend the edit pass running broad `pnpm run diff:checks` repeatedly/,
+  );
   assert.match(prompt, /seed or mock minimal local dev\/test database rows/);
   assert.match(prompt, /keep proof artifacts out of the PR diff/);
 });

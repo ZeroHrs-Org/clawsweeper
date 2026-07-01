@@ -1026,6 +1026,7 @@ test("ZeroHrs target validation seeds env from secret without leaking write cred
     "COMPOSIO_WEBHOOK_SECRET",
     "RECALL_API_KEY",
     "RECALL_WORKSPACE_VERIFICATION_SECRET",
+    "OPENCLAW_DEFAULT_MODEL",
     "PUBLIC_API_BASE_URL",
     "RESEND_API_KEY",
     "RESEND_FROM_EMAIL",

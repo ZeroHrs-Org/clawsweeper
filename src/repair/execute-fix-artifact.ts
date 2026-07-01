@@ -3561,6 +3561,59 @@ function zeroHrsIssueProofRequirement({
       reason: `ZeroHrs Android proof manifest status is ${manifest.status ?? "missing"}, expected completed.${restoredNote}`,
     };
   }
+  const route = firstManifestString(manifest, [
+    ["route"],
+    ["reproduction_route"],
+    ["issue_route"],
+    ["captures", "before", "route"],
+    ["captures", "after", "route"],
+  ]);
+  if (!route) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest is missing the issue-specific reproduction route.${restoredNote}`,
+    };
+  }
+  const beforeRef = firstManifestString(manifest, [
+    ["before_ref"],
+    ["before_sha"],
+    ["before_branch"],
+    ["refs", "before"],
+    ["captures", "before", "ref"],
+    ["captures", "before", "sha"],
+    ["captures", "before", "branch"],
+  ]);
+  const afterRef = firstManifestString(manifest, [
+    ["after_ref"],
+    ["after_sha"],
+    ["after_branch"],
+    ["refs", "after"],
+    ["captures", "after", "ref"],
+    ["captures", "after", "sha"],
+    ["captures", "after", "branch"],
+  ]);
+  if (!beforeRef || !afterRef) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest is missing before/after refs or branch names.${restoredNote}`,
+    };
+  }
+  const beforeLauncher = manifestValueAt(manifest, [
+    "captures",
+    "before",
+    "launcher_screen_detected",
+  ]);
+  const afterLauncher = manifestValueAt(manifest, [
+    "captures",
+    "after",
+    "launcher_screen_detected",
+  ]);
+  if (beforeLauncher !== false || afterLauncher !== false) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest must explicitly mark before/after launcher_screen_detected as false.${restoredNote}`,
+    };
+  }
   for (const field of [
     manifest?.captures?.before?.loading_screenshot,
     manifest?.captures?.before?.recording,
@@ -3575,6 +3628,23 @@ function zeroHrsIssueProofRequirement({
     }
   }
   return { status: "satisfied" };
+}
+
+function firstManifestString(manifest: LooseRecord, paths: string[][]) {
+  for (const segments of paths) {
+    const value = manifestValueAt(manifest, segments);
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function manifestValueAt(manifest: LooseRecord, segments: string[]) {
+  let value: JsonValue = manifest;
+  for (const segment of segments) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+    value = (value as LooseRecord)[segment];
+  }
+  return value;
 }
 
 function isZeroHrsIssueImplementation() {

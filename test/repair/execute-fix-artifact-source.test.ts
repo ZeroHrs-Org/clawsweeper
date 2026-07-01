@@ -242,6 +242,16 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /zeroHrsIssueProofRequirement\(\{/);
   assert.match(source, /do not edit protected proof harness files/);
   assert.match(source, /manifest\.status !== "completed"/);
+  assert.match(source, /firstManifestString\(manifest/);
+  assert.match(
+    source,
+    /ZeroHrs Android proof manifest is missing the issue-specific reproduction route/,
+  );
+  assert.match(
+    source,
+    /ZeroHrs Android proof manifest is missing before\/after refs or branch names/,
+  );
+  assert.match(source, /launcher_screen_detected as false/);
   assert.match(source, /captures\?\.before\?\.loading_screenshot/);
   assert.match(source, /scripts\/crabbox\/android-proof\.sh/);
   assert.match(source, /scripts\/crabbox\/run-android-proof\.sh/);
