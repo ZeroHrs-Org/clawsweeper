@@ -155,7 +155,6 @@ const ZEROHRS_ANDROID_PROOF_HARNESS_FILES = [
 const PROOF_ARTIFACT_GIT_EXCLUDE_PATHS = [
   `:(exclude)${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/**`,
   `:(exclude)${LEGACY_ANDROID_PROOF_SOURCE_DIR}/**`,
-  ...ZEROHRS_ANDROID_PROOF_HARNESS_FILES.map((file) => `:(exclude)${file}`),
 ];
 
 const args = parseArgs(process.argv.slice(2));
@@ -3433,8 +3432,7 @@ function restoreZeroHrsIssueProofHarness({ targetDir }: { targetDir: string }) {
     cwd: targetDir,
   })
     .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
+    .filter((line) => line.trim())
     .map((line) => line.slice(3).trim())
     .filter(Boolean);
   const baseDiff = run("git", ["diff", "--name-only", restoreSource, "--", ...tracked], {

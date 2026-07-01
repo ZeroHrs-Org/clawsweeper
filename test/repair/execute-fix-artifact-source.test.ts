@@ -218,10 +218,24 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   const checkpoint = source.slice(checkpointStart, checkpointEnd);
   const restore = source.slice(restoreStart, restoreEnd);
   const sourceHelper = source.slice(sourceStart, source.indexOf("function pushRecoverableBranch("));
+  const proofExcludeStart = source.indexOf("const PROOF_ARTIFACT_GIT_EXCLUDE_PATHS = [");
+  const proofExcludeEnd = source.indexOf("];", proofExcludeStart);
+  const proofExcludes = source.slice(proofExcludeStart, proofExcludeEnd);
+  const changedStart = restore.indexOf(
+    'const changed = run("git", ["status", "--porcelain", "--", ...tracked]',
+  );
+  const changedEnd = restore.indexOf("const baseDiff", changedStart);
+  const changedBlock = restore.slice(changedStart, changedEnd);
+
   assert.match(source, /ZEROHRS_ANDROID_PROOF_HARNESS_FILES = \[/);
   assert.match(source, /scripts\/crabbox\/android-proof\.sh/);
   assert.match(source, /scripts\/crabbox\/run-android-proof\.sh/);
   assert.match(source, /docs\/crabbox-hetzner-feedback\.md/);
+  assert.match(proofExcludes, /EXECUTOR_ANDROID_PROOF_SOURCE_DIR/);
+  assert.match(proofExcludes, /LEGACY_ANDROID_PROOF_SOURCE_DIR/);
+  assert.doesNotMatch(proofExcludes, /ZEROHRS_ANDROID_PROOF_HARNESS_FILES/);
+  assert.doesNotMatch(proofExcludes, /scripts\/crabbox/);
+  assert.doesNotMatch(proofExcludes, /docs\/crabbox-hetzner-feedback/);
   assert.ok(
     checkpoint.indexOf("restoreZeroHrsIssueProofHarness({ targetDir });") <
       checkpoint.indexOf('run("git", ["add"'),
@@ -232,6 +246,9 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(restore, /git", \["diff", "--name-only", restoreSource/);
   assert.match(restore, /git", \["restore", "--source", restoreSource/);
   assert.match(restore, /restored ZeroHrs proof harness files before checkpoint/);
+  assert.match(changedBlock, /\.filter\(\(line\) => line\.trim\(\)\)/);
+  assert.match(changedBlock, /\.map\(\(line\) => line\.slice\(3\)\.trim\(\)\)/);
+  assert.doesNotMatch(changedBlock, /\.map\(\(line\) => line\.trim\(\)\)/);
   assert.match(sourceHelper, /origin\/\$\{baseBranch\}/);
   assert.match(sourceHelper, /return check\.status === 0 \? candidate : "HEAD"/);
 });
