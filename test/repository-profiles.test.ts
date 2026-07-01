@@ -36,6 +36,9 @@ test("ZeroHrs feedback profile treats maintainer-authored reports as external fe
   assert.match(profile.promptNote, /external user report/);
   assert.match(profile.promptNote, /GitHub issue author is a ZeroHrs maintainer/);
   assert.match(profile.promptNote, /prefer Android Crabbox proof/);
+  assert.match(profile.promptNote, /before-loading\.png/);
+  assert.match(profile.promptNote, /before\.mp4/);
+  assert.match(profile.promptNote, /seed or mock data in the local dev\/test database/);
   assert.deepEqual(profile.applyCloseRules.issue, ["implemented_on_main"]);
 });
 

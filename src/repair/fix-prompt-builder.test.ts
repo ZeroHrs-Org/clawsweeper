@@ -97,6 +97,26 @@ test("fix prompt makes Codex own the validation loop", () => {
   assert.match(prompt, /do not report validation as passed unless it passed after your last edit/);
 });
 
+test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
+  const prompt = promptFor({
+    repo: "ZeroHrs-Org/zerohrs-app",
+    repair_strategy: "new_fix_pr",
+    pr_title: "Fix Android feedback loading state",
+    summary: "Repair a mobile feedback issue.",
+    source_issues: ["https://github.com/ZeroHrs-Org/zerohrs-app/issues/270"],
+    changelog_required: false,
+    likely_files: ["scripts/crabbox/android-proof.sh"],
+    validation_commands: ["pnpm run diff:checks"],
+  });
+
+  assert.match(prompt, /ZeroHrs mobile feedback proof/);
+  assert.match(prompt, /before-loading\.png/);
+  assert.match(prompt, /before\.mp4/);
+  assert.match(prompt, /after-loading\.png/);
+  assert.match(prompt, /after\.mp4/);
+  assert.match(prompt, /seed or mock minimal local dev\/test database rows/);
+});
+
 test("automerge fix prompt makes Codex own PR repair, rebase, and CI discovery", () => {
   const prompt = buildFixPrompt({
     fixArtifact: {

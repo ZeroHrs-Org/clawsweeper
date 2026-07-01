@@ -53,6 +53,7 @@ export function buildFixPrompt({
     "- do not inspect or print environment variables, credentials, tokens, or secrets;",
     "- do not change auth, approval, sandbox, or trust-boundary semantics unless the artifact explicitly asks for that boundary change;",
     "- exec-adjacent bugs are allowed when the fix is ordinary correctness or hardening and does not redefine the security boundary;",
+    renderTargetSpecificRepairGuidance(fixArtifact),
     "- before returning, verify git status/diff/log show a merge-ready branch state.",
     "",
     renderValidationLoopGuidance({ fixArtifact, validationCommands, isAutomergeRepair }),
@@ -83,6 +84,19 @@ export function buildFixPrompt({
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function renderTargetSpecificRepairGuidance(fixArtifact: LooseRecord) {
+  const repo = String(fixArtifact.repo ?? "")
+    .trim()
+    .toLowerCase();
+  if (repo !== "zerohrs-org/zerohrs-app") return "";
+  return [
+    "- ZeroHrs mobile feedback proof: run the Android Crabbox proof runner when available and the issue touches mobile UI/runtime behavior;",
+    "- proof must include issue-specific loading screenshots and MP4 recordings: `before-loading.png`, `before.mp4`, `after-loading.png`, and `after.mp4`; launcher or generic start-page screenshots alone are not sufficient;",
+    "- capture before evidence from current `main` and after evidence from this fixed branch before returning, or document the exact proof blocker;",
+    "- when reproducing feedback needs account, app, or database state, seed or mock minimal local dev/test database rows and document the seed; do not use production data.",
+  ].join("\n");
 }
 
 export function renderFixArtifactForPrompt(fixArtifact: JsonValue) {

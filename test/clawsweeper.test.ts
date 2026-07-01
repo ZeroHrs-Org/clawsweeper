@@ -1007,6 +1007,11 @@ test("repair workers hydrate only durable jobs from generated state", () => {
       ?.length,
     2,
   );
+  assert.equal(workflow.match(/- name: Prepare ZeroHrs Crabbox proof environment/g)?.length, 2);
+  assert.match(workflow, /contains\(inputs\.job, 'zerohrs-app'\)/);
+  assert.match(workflow, /CRABBOX_STATIC_HOST/);
+  assert.match(workflow, /ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY/);
+  assert.match(workflow, /crabbox_\$\{CRABBOX_VERSION\}_linux_amd64\.tar\.gz/);
   assert.match(workflow, /CLAWSWEEPER_STEERABLE_CODEX/);
   assert.match(workflow, /actions\/cache\/restore@v5/);
   assert.match(workflow, /actions\/cache\/save@v5/);
@@ -1140,7 +1145,7 @@ test("Codex workflows install pinned CLI releases and keep the model secret", ()
   for (const workflow of workflows) {
     assert.match(
       workflow,
-      /CLAWSWEEPER_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \|\| vars\.CLAWSWEEPER_MODEL \|\| 'gpt-5\.5' \}\}/,
+      /CLAWSWEEPER_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \|\| vars\.CLAWSWEEPER_MODEL \|\| 'gpt-5\.4' \}\}/,
     );
     assert.match(workflow, /CODEX_AUTH_JSON_B64: \$\{\{ secrets\.CODEX_AUTH_JSON_B64 \}\}/);
     assert.match(

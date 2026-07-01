@@ -54,7 +54,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CLAWSWEEPER_APP_CLIENT_ID: Iv23liOECG0slfuhz093
-  CLAWSWEEPER_MODEL: ${{ secrets.CLAWSWEEPER_MODEL || vars.CLAWSWEEPER_MODEL || 'gpt-5.5' }}
+  CLAWSWEEPER_MODEL: ${{ secrets.CLAWSWEEPER_MODEL || vars.CLAWSWEEPER_MODEL || 'gpt-5.4' }}
 
 concurrency:
   group: ${{ format('clawsweeper-assist-{0}-{1}-{2}', github.event.client_payload.target_repo || inputs.target_repo || 'openclaw/openclaw', github.event.client_payload.item_number || inputs.item_number || github.run_id, github.event.client_payload.comment_id || inputs.comment_id || github.run_id) }}

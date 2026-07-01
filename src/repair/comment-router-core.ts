@@ -408,6 +408,7 @@ export function renderIssueImplementationJob({
   const overrideClass = String(overrideBlockerClass ?? "").trim();
   const hardOverride = override && overrideClass === "hard";
   const overrideActionText = String(overrideAction ?? "").trim();
+  const zeroHrsGuardrails = zeroHrsIssueImplementationGuardrails(repo);
   const sourceRevision = String(sourceIssueRevision ?? "")
     .trim()
     .toLowerCase();
@@ -554,6 +555,7 @@ implementable by automation, do not change code; report the exact blocker.
 ${bugOnlyGuardrails}
 ${visionFitGuardrails}
 ${overrideGuardrails}
+${zeroHrsGuardrails}
 ${artifactInstructions}
 
 ## Guardrails
@@ -566,6 +568,32 @@ ${artifactInstructions}
 - Use a closing reference for ${issueUrl} when the implementation satisfies the issue.
 - Preserve release-note context in the PR body or commit message when the
   target repo expects it.
+	`;
+}
+
+function zeroHrsIssueImplementationGuardrails(repo: unknown) {
+  if (
+    String(repo ?? "")
+      .trim()
+      .toLowerCase() !== "zerohrs-org/zerohrs-app"
+  )
+    return "";
+  return `
+## ZeroHrs Feedback Proof Rules
+
+- If labels, body text, report id, screenshot metadata, or admin feedback links
+  indicate mobile feedback, treat the issue as an external user report even when
+  the GitHub author is a ZeroHrs maintainer or repository owner.
+- For mobile UI/runtime issues, verify on Android with the target repo Crabbox
+  proof runner. Do not accept Android launcher screenshots or generic start-page
+  captures as sufficient proof.
+- Before opening the PR, attach or reference issue-specific before/after proof:
+  \`before-loading.png\` and \`before.mp4\` from current \`main\`, plus
+  \`after-loading.png\` and \`after.mp4\` from the fixed branch. If proof cannot
+  run, report the exact blocker and do not present the PR as Android-verified.
+- When reproduction depends on account, app, or database state, seed or mock the
+  local dev/test database with the minimum rows needed to reproduce the report,
+  document the seed commands or fixture, and never use production data.
 `;
 }
 
