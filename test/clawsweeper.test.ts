@@ -1000,6 +1000,7 @@ test("repair workers hydrate only durable jobs from generated state", () => {
 
   assert.match(workflow, /clawsweeper-repair-requeue-\{0\}-\{1\}.*clawsweeper-repair-\{0\}/);
   assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /owner: \$\{\{ github\.repository_owner \}\}/);
   assert.match(workflow, /requeue:\n\s+description:/);
   assert.match(requeue, /"requeue=true"/);
   assert.equal(
