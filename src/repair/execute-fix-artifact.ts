@@ -150,6 +150,8 @@ const ZEROHRS_ANDROID_PROOF_HARNESS_FILES = [
   "docs/crabbox-hetzner-feedback.md",
   "scripts/crabbox/android-proof.sh",
   "scripts/crabbox/android-proof.test.sh",
+  "scripts/crabbox/bootstrap-hetzner-android-runner.sh",
+  "scripts/crabbox/bootstrap-hetzner-android-runner.test.sh",
   "scripts/crabbox/run-android-proof.sh",
   "scripts/crabbox/run-android-proof.test.sh",
 ];
@@ -2219,7 +2221,7 @@ function editValidatePrepareMerge({
         previousSummary = [
           readTextIfExists(summaryPath).trim(),
           proofRequirement.reason,
-          "For the next attempt, do not edit protected proof harness files. Run Crabbox on the configured SSH runner and copy the required completed proof files into reports/clawsweeper/android-proof before returning.",
+          "For the next attempt, do not edit or bootstrap protected proof infrastructure. Run the real Crabbox SSH proof path, do not use dry-run mode, and copy completed proof files into reports/clawsweeper/android-proof before returning. If host-key/auth/runner trust fails, write a blocked proof manifest with command.log and stop without fabricating media.",
         ]
           .filter(Boolean)
           .join("\n\n")
@@ -2238,6 +2240,9 @@ function editValidatePrepareMerge({
           details: proofRequirement.reason,
           headSha: currentHead(targetDir),
         });
+        if (proofRequirement.status === "blocked") {
+          throw new Error(proofRequirement.reason);
+        }
         if (attempt < maxEditAttempts) continue;
         throw new Error(proofRequirement.reason);
       }
@@ -3530,6 +3535,24 @@ function zeroHrsIssueProofRequirement({
       reason: `ZeroHrs Android proof is missing at ${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}.${restoredNote}`,
     };
   }
+  const manifestPath = path.join(sourceDir, "proof-manifest.json");
+  const manifestRead = readExecutorAndroidProofManifest(manifestPath, restoredNote);
+  if (manifestRead.status !== "missing") {
+    if (manifestRead.status === "invalid") return manifestRead;
+    const manifest = manifestRead.manifest;
+    if (manifest.status === "blocked") {
+      return {
+        status: "blocked",
+        reason: `ZeroHrs Android proof is blocked by external runner infrastructure: ${proofManifestBlocker(manifest)}.${restoredNote}`,
+      };
+    }
+    if (manifest.status === "dry-run") {
+      return {
+        status: "invalid",
+        reason: `ZeroHrs Android proof manifest status is dry-run, expected completed. Dry-run artifacts are diagnostic only; run the real Crabbox SSH proof path and do not set ZEROHRS_ANDROID_PROOF_DRY_RUN=1.${restoredNote}`,
+      };
+    }
+  }
   for (const name of EXECUTOR_ANDROID_REQUIRED_PROOF_FILES) {
     const filePath = path.join(sourceDir, name);
     if (!fs.existsSync(filePath)) {
@@ -3545,16 +3568,10 @@ function zeroHrsIssueProofRequirement({
       };
     }
   }
-  const manifestPath = path.join(sourceDir, "proof-manifest.json");
-  let manifest: LooseRecord;
-  try {
-    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-  } catch (error) {
-    return {
-      status: "invalid",
-      reason: `ZeroHrs Android proof manifest is not valid JSON: ${String(error instanceof Error ? error.message : error)}.${restoredNote}`,
-    };
-  }
+  const manifest =
+    manifestRead.status === "parsed"
+      ? manifestRead.manifest
+      : readExecutorAndroidProofManifest(manifestPath, restoredNote).manifest;
   if (manifest.status !== "completed") {
     return {
       status: "invalid",
@@ -3628,6 +3645,39 @@ function zeroHrsIssueProofRequirement({
     }
   }
   return { status: "satisfied" };
+}
+
+function readExecutorAndroidProofManifest(manifestPath: string, restoredNote: string) {
+  if (!fs.existsSync(manifestPath)) return { status: "missing" as const };
+  if (fs.statSync(manifestPath).size <= 0) {
+    return {
+      status: "invalid" as const,
+      reason: `ZeroHrs Android proof artifact is empty: ${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/proof-manifest.json.${restoredNote}`,
+    };
+  }
+  try {
+    return {
+      status: "parsed" as const,
+      manifest: JSON.parse(fs.readFileSync(manifestPath, "utf8")) as LooseRecord,
+    };
+  } catch (error) {
+    return {
+      status: "invalid" as const,
+      reason: `ZeroHrs Android proof manifest is not valid JSON: ${String(error instanceof Error ? error.message : error)}.${restoredNote}`,
+    };
+  }
+}
+
+function proofManifestBlocker(manifest: LooseRecord) {
+  const blocker = firstManifestString(manifest, [
+    ["blocker"],
+    ["reason"],
+    ["error"],
+    ["failure"],
+    ["external_blocker"],
+    ["runner_blocker"],
+  ]);
+  return compactText(blocker || "proof runner reported status blocked", 300);
 }
 
 function firstManifestString(manifest: LooseRecord, paths: string[][]) {
