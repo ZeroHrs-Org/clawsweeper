@@ -141,6 +141,14 @@ const FIX_ACTIONS = new Set(["fix_needed", "build_fix_artifact", "open_fix_pr"])
 const NON_EXECUTABLE_REPAIR_STRATEGIES = new Set(["already_fixed_on_main", "needs_human"]);
 const DEFAULT_BASE_BRANCH = "main";
 const DEFAULT_REPAIR_PUSH_SETTLE_SECONDS = 90;
+const ZEROHRS_REPO = "ZeroHrs-Org/zerohrs-app";
+const EXECUTOR_ANDROID_PROOF_SOURCE_DIR = path.join("reports", "clawsweeper", "android-proof");
+const LEGACY_ANDROID_PROOF_SOURCE_DIR = path.join("reports", "crabbox-android");
+const EXECUTOR_ANDROID_PROOF_RUN_DIR = path.join("zerohrs-android-proof", "executor");
+const PROOF_ARTIFACT_GIT_EXCLUDE_PATHS = [
+  `:(exclude)${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/**`,
+  `:(exclude)${LEGACY_ANDROID_PROOF_SOURCE_DIR}/**`,
+];
 
 const args = parseArgs(process.argv.slice(2));
 const jobPath = args._[0];
@@ -2177,9 +2185,7 @@ function editValidatePrepareMerge({
         headSha: currentHead(targetDir),
       });
 
-      const hasWorkingTreeChanges = Boolean(
-        run("git", ["status", "--porcelain"], { cwd: targetDir }).trim(),
-      );
+      const hasWorkingTreeChanges = Boolean(committableGitStatus({ targetDir }).trim());
       const hasHeadChanges = currentHead(targetDir) !== headBeforeAttempt;
       producedChanges = producedChanges || hasWorkingTreeChanges || hasHeadChanges;
       if (producedChanges) break;
@@ -3387,12 +3393,21 @@ function checkoutRecoverableReplacementBranch({
 }
 
 function commitCheckpointIfNeeded({ targetDir, message, trailers = [] }: LooseRecord) {
-  if (!run("git", ["status", "--porcelain"], { cwd: targetDir }).trim()) return "";
-  run("git", ["add", "--all"], { cwd: targetDir });
+  if (!committableGitStatus({ targetDir }).trim()) return "";
+  run("git", ["add", "--all", "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS], {
+    cwd: targetDir,
+  });
+  if (!run("git", ["diff", "--cached", "--name-only"], { cwd: targetDir }).trim()) return "";
   const args = ["commit", "-m", message];
   for (const trailer of uniqueStrings(trailers)) args.push("-m", trailer);
   runGitNetwork(args, targetDir);
   return run("git", ["rev-parse", "HEAD"], { cwd: targetDir }).trim();
+}
+
+function committableGitStatus({ targetDir }: { targetDir: string }) {
+  return run("git", ["status", "--porcelain", "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS], {
+    cwd: targetDir,
+  });
 }
 
 function pushRecoverableBranch({ targetDir, branch }: LooseRecord) {
@@ -3496,6 +3511,7 @@ function findLatestResultPath() {
 }
 
 function writeReport(report: LooseRecord, resultPath: string) {
+  collectExecutorAndroidProofArtifacts(report, resultPath);
   appendIssueImplementationStatusComment(report);
   appendAutomergeRepairOutcomeComment(report, resultPath);
   const reportPath =
@@ -3508,6 +3524,55 @@ function writeReport(report: LooseRecord, resultPath: string) {
   }
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   console.log("Wrote fix execution report.");
+}
+
+function collectExecutorAndroidProofArtifacts(report: LooseRecord, resultPath: string) {
+  if (String(result.repo ?? "").toLowerCase() !== ZEROHRS_REPO.toLowerCase()) return;
+  if (!targetDir || !fs.existsSync(targetDir)) {
+    report.android_proof_artifacts = {
+      status: "missing",
+      reason: "target checkout is not available for proof artifact collection",
+      expected_path: EXECUTOR_ANDROID_PROOF_SOURCE_DIR,
+    };
+    return;
+  }
+
+  const sourceDir = path.join(targetDir, EXECUTOR_ANDROID_PROOF_SOURCE_DIR);
+  if (!fs.existsSync(sourceDir)) {
+    report.android_proof_artifacts = {
+      status: "missing",
+      reason: "executor did not produce Android proof artifacts",
+      expected_path: EXECUTOR_ANDROID_PROOF_SOURCE_DIR,
+    };
+    return;
+  }
+
+  const destination = path.join(path.dirname(resultPath), EXECUTOR_ANDROID_PROOF_RUN_DIR);
+  fs.rmSync(destination, { recursive: true, force: true });
+  fs.mkdirSync(destination, { recursive: true });
+  fs.cpSync(sourceDir, destination, { recursive: true, force: true });
+  report.android_proof_artifacts = {
+    status: "collected",
+    source_path: EXECUTOR_ANDROID_PROOF_SOURCE_DIR,
+    path: path.relative(repoRoot(), destination),
+    files: listRelativeFiles(destination),
+  };
+}
+
+function listRelativeFiles(root: string) {
+  const out: string[] = [];
+  const visit = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const entryPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        visit(entryPath);
+        continue;
+      }
+      if (entry.isFile()) out.push(path.relative(root, entryPath));
+    }
+  };
+  visit(root);
+  return out.sort();
 }
 
 function appendIssueImplementationStatusComment(report: LooseRecord) {

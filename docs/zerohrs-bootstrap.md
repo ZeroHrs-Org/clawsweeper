@@ -27,20 +27,24 @@ Optional ClawSweeper repository secret:
 
 ## Runner
 
-ZeroHrs mobile feedback proof should use the target repo's `android-proof` Crabbox job on the static Hetzner SSH host.
+ZeroHrs mobile feedback review can use the target repo's legacy `android-proof` Crabbox job on the static Hetzner SSH host to capture current-state reproduction evidence before planning. This review evidence is not after-fix proof.
 
-Android proof may sign in with the public ZeroHrs test account:
+Implementation proof is owned by the executor coding agent. The agent should decide the issue-specific Android reproduction path, seed or mock any needed local dev/test data, capture current-main `before-*` media and fixed-branch `after-*` media, then save the result under `reports/clawsweeper/android-proof`. ClawSweeper only collects and publishes that executor-owned directory.
 
-- `sid@zerohrs.com`
-- `Cooking@9098`
+Android proof should read test-account credentials from repository secrets such as `ZEROHRS_TEST_EMAIL` and `ZEROHRS_TEST_PASSWORD`; do not hardcode them in prompts, docs, or scripts.
 
-Expected target repo artifacts:
+Expected executor proof artifacts:
 
-- `reports/crabbox-android/proof-manifest.json`
-- `reports/crabbox-android/emulator.log`
-- `reports/crabbox-android/app.log`
-- `reports/crabbox-android/before.png`
-- `reports/crabbox-android/after.png`
+- `reports/clawsweeper/android-proof/proof-manifest.json`
+- `reports/clawsweeper/android-proof/command.log`
+- `reports/clawsweeper/android-proof/emulator.log`
+- `reports/clawsweeper/android-proof/app.log`
+- `reports/clawsweeper/android-proof/before-loading.png`
+- `reports/clawsweeper/android-proof/before.mp4`
+- `reports/clawsweeper/android-proof/after-loading.png`
+- `reports/clawsweeper/android-proof/after.mp4`
+- `reports/clawsweeper/android-proof/before.png`
+- `reports/clawsweeper/android-proof/after.png`
 
 ## Bootstrap Gap
 

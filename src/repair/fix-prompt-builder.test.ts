@@ -110,11 +110,15 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   });
 
   assert.match(prompt, /ZeroHrs mobile feedback proof/);
+  assert.match(prompt, /executor agent owns issue-specific Android verification/);
+  assert.match(prompt, /do not hardcode one issue's navigation/);
+  assert.match(prompt, /reports\/clawsweeper\/android-proof/);
   assert.match(prompt, /before-loading\.png/);
   assert.match(prompt, /before\.mp4/);
   assert.match(prompt, /after-loading\.png/);
   assert.match(prompt, /after\.mp4/);
   assert.match(prompt, /seed or mock minimal local dev\/test database rows/);
+  assert.match(prompt, /keep proof artifacts out of the PR diff/);
 });
 
 test("automerge fix prompt makes Codex own PR repair, rebase, and CI discovery", () => {

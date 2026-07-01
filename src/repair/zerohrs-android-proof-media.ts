@@ -12,6 +12,7 @@ import { parsePullRequestUrl } from "./github-ref.js";
 const ZEROHRS_REPO = "ZeroHrs-Org/zerohrs-app";
 const PROOF_ASSET_BRANCH = "zerohrs-clawsweeper-proof-assets";
 const PROOF_MARKER_PREFIX = "<!-- clawsweeper-zerohrs-android-proof";
+const EXECUTOR_PROOF_DIR = path.join("zerohrs-android-proof", "executor");
 const GITHUB_ATTACHMENT_IMAGE_LIMIT_BYTES = 10_000_000;
 const GITHUB_ATTACHMENT_VIDEO_LIMIT_BYTES = 100_000_000;
 const GITHUB_ATTACHMENT_OTHER_LIMIT_BYTES = 25_000_000;
@@ -28,9 +29,6 @@ const REQUIRED_PROOF_FILES = [
   "before.png",
   "after.png",
 ];
-const REQUIRED_REMOTE_PROOF_FILES = REQUIRED_PROOF_FILES.map(
-  (name) => `reports/crabbox-android/${name}`,
-);
 const MEDIA_FILES = [
   "proof-manifest.json",
   "before-loading.png",
@@ -56,9 +54,6 @@ const jobPath = args._[0];
 const resultPathArg = args._[1];
 const latest = Boolean(args.latest);
 const dryRun = Boolean(args["dry-run"] || process.env.CLAWSWEEPER_ZEROHRS_PROOF_DRY_RUN === "1");
-const proofTimeoutMs = Number(
-  process.env.CLAWSWEEPER_ZEROHRS_ANDROID_PROOF_TIMEOUT_MS ?? 65 * 60 * 1000,
-);
 
 if (!jobPath) {
   console.error(
@@ -179,33 +174,26 @@ async function maybeRunZeroHrsProof() {
   }
 
   const proofRoot = path.join(runDir, "zerohrs-android-proof");
+  const executorProofDir = path.join(runDir, EXECUTOR_PROOF_DIR);
+  if (!fs.existsSync(executorProofDir)) {
+    return {
+      action: "zerohrs_android_proof",
+      status: "blocked",
+      pr: `#${parsed.number}`,
+      pr_url: view.url ?? fixPr.pr_url,
+      head_sha: view.headRefOid ?? null,
+      reason:
+        "executor did not produce Android proof media under reports/clawsweeper/android-proof",
+      expected_executor_path: "reports/clawsweeper/android-proof",
+      collected_path: path.relative(repoRoot(), executorProofDir),
+    };
+  }
+
   const proofDir = path.join(proofRoot, `pr-${parsed.number}`);
-  const beforeDir = path.join(proofRoot, `pr-${parsed.number}-before-main`);
-  const afterDir = path.join(proofRoot, `pr-${parsed.number}-after-fix`);
   fs.rmSync(proofDir, { recursive: true, force: true });
-  fs.rmSync(beforeDir, { recursive: true, force: true });
-  fs.rmSync(afterDir, { recursive: true, force: true });
   fs.mkdirSync(proofDir, { recursive: true });
-  fs.mkdirSync(beforeDir, { recursive: true });
-  fs.mkdirSync(afterDir, { recursive: true });
+  fs.cpSync(executorProofDir, proofDir, { recursive: true, force: true });
 
-  const baseRefName = String(view.baseRefName ?? "main") || "main";
-  const baseTargetDir = cloneBaseReference(baseRefName, proofRoot);
-  runProofCommand({ targetDir: baseTargetDir, proofDir: beforeDir });
-
-  const fixedTargetDir = clonePullRequest(parsed.number, proofRoot);
-  runProofCommand({ targetDir: fixedTargetDir, proofDir: afterDir });
-
-  composeBeforeAfterProof({
-    beforeDir,
-    afterDir,
-    outputDir: proofDir,
-    prNumber: parsed.number,
-    beforeRef: baseRefName,
-    afterRef: view.headRefName ?? `pull/${parsed.number}`,
-    beforeSha: baseHeadSha(baseTargetDir),
-    afterSha: view.headRefOid,
-  });
   const proofFiles = validateProofFiles(proofDir);
   const published = publishProofAssets({
     proofDir,
@@ -263,240 +251,6 @@ function fetchPullRequestView(number: number) {
     "--json",
     ["number", "url", "title", "headRefName", "headRefOid", "baseRefName"].join(","),
   ]);
-}
-
-function clonePullRequest(number: number, proofRoot: string) {
-  const targetDir = path.join(
-    fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-proof-target-")),
-    "repo",
-  );
-  cloneZeroHrsRepo(targetDir, ["--filter=blob:none"]);
-  run("git", ["fetch", "origin", `pull/${number}/head:zerohrs-proof-pr-${number}`], {
-    cwd: targetDir,
-    env: gitAuthEnv(),
-    timeoutMs: 5 * 60 * 1000,
-  });
-  run("git", ["checkout", `zerohrs-proof-pr-${number}`], {
-    cwd: targetDir,
-    timeoutMs: 60_000,
-  });
-  fs.mkdirSync(proofRoot, { recursive: true });
-  return targetDir;
-}
-
-function cloneBaseReference(baseRefName: string, proofRoot: string) {
-  const targetDir = path.join(
-    fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-proof-base-")),
-    "repo",
-  );
-  cloneZeroHrsRepo(targetDir, ["--filter=blob:none"]);
-  run("git", ["fetch", "origin", `${baseRefName}:zerohrs-proof-base-${baseRefName}`], {
-    cwd: targetDir,
-    env: gitAuthEnv(),
-    timeoutMs: 5 * 60 * 1000,
-  });
-  run("git", ["checkout", `zerohrs-proof-base-${baseRefName}`], {
-    cwd: targetDir,
-    timeoutMs: 60_000,
-  });
-  fs.mkdirSync(proofRoot, { recursive: true });
-  return targetDir;
-}
-
-function runProofCommand({ targetDir, proofDir }: LooseRecord) {
-  if (dryRun) return;
-  run("crabbox", zeroHrsAndroidProofRunArgs(), {
-    cwd: targetDir,
-    env: zeroHrsAndroidProofEnv(),
-    timeoutMs: proofTimeoutMs,
-  });
-
-  copySourceProofRun({ targetDir, proofDir });
-  validateSourceProofRun(proofDir);
-}
-
-function copySourceProofRun({ targetDir, proofDir }: LooseRecord) {
-  const sourceProofDir = path.join(targetDir, "reports", "crabbox-android");
-  if (fs.existsSync(sourceProofDir)) {
-    fs.cpSync(sourceProofDir, proofDir, { recursive: true, force: true });
-    return;
-  }
-
-  const artifactPath = findLatestCrabboxArtifactTarball(targetDir);
-  if (artifactPath) {
-    const extractedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-proof-artifacts-"));
-    try {
-      run("tar", ["-xzf", artifactPath, "-C", extractedRoot, "reports/crabbox-android"], {
-        timeoutMs: 60_000,
-      });
-      const extractedProofDir = path.join(extractedRoot, "reports", "crabbox-android");
-      if (fs.existsSync(extractedProofDir)) {
-        fs.cpSync(extractedProofDir, proofDir, { recursive: true, force: true });
-        return;
-      }
-    } finally {
-      fs.rmSync(extractedRoot, { recursive: true, force: true });
-    }
-  }
-
-  throw new Error("Crabbox Android proof did not produce reports/crabbox-android");
-}
-
-function findLatestCrabboxArtifactTarball(targetDir: string) {
-  const runsDir = path.join(targetDir, ".crabbox", "runs");
-  if (!fs.existsSync(runsDir)) return null;
-  const candidates: { path: string; mtimeMs: number }[] = [];
-  const visit = (dir: string) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const entryPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        visit(entryPath);
-        continue;
-      }
-      if (!entry.isFile() || !entry.name.endsWith("-artifacts.tgz")) continue;
-      candidates.push({ path: entryPath, mtimeMs: fs.statSync(entryPath).mtimeMs });
-    }
-  };
-  visit(runsDir);
-  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  return candidates[0]?.path ?? null;
-}
-
-function zeroHrsAndroidProofRunArgs() {
-  const host = process.env.CRABBOX_STATIC_HOST || process.env.HETZNER_IPV4 || "";
-  if (!host)
-    throw new Error("Missing HETZNER_IPV4 or CRABBOX_STATIC_HOST for Android proof runner");
-  const args = [
-    "run",
-    "--reclaim",
-    "--provider",
-    "ssh",
-    "--target",
-    "linux",
-    "--static-host",
-    host,
-    "--static-user",
-    process.env.CRABBOX_STATIC_USER || "crabbox",
-    "--static-port",
-    process.env.CRABBOX_STATIC_PORT || "22",
-    "--static-work-root",
-    process.env.CRABBOX_STATIC_WORK_ROOT || "/work/crabbox",
-    "--no-hydrate",
-    "--label",
-    "ZeroHrs Android feedback proof",
-    "--artifact-glob",
-    "reports/crabbox-android/**",
-  ];
-  for (const artifact of REQUIRED_REMOTE_PROOF_FILES) {
-    args.push("--require-artifact", artifact);
-  }
-  args.push("--stop-after", "success", "--shell", "--", "bash scripts/crabbox/android-proof.sh");
-  return args;
-}
-
-function zeroHrsAndroidProofEnv() {
-  return {
-    ...process.env,
-    CRABBOX_STATIC_HOST: process.env.CRABBOX_STATIC_HOST || process.env.HETZNER_IPV4 || "",
-    ZEROHRS_ANDROID_PROOF_DIR: "reports/crabbox-android",
-  };
-}
-
-function validateSourceProofRun(proofDir: string) {
-  for (const name of REQUIRED_PROOF_FILES) {
-    const filePath = path.join(proofDir, name);
-    if (!fs.existsSync(filePath) || fs.statSync(filePath).size <= 0) {
-      throw new Error(`Crabbox Android proof did not produce a valid ${name}`);
-    }
-  }
-  const manifest = JSON.parse(fs.readFileSync(path.join(proofDir, "proof-manifest.json"), "utf8"));
-  if (manifest.status !== "completed") {
-    throw new Error(`Crabbox Android proof manifest status is ${manifest.status ?? "missing"}`);
-  }
-}
-
-function composeBeforeAfterProof({
-  beforeDir,
-  afterDir,
-  outputDir,
-  prNumber,
-  beforeRef,
-  afterRef,
-  beforeSha,
-  afterSha,
-}: {
-  beforeDir: string;
-  afterDir: string;
-  outputDir: string;
-  prNumber: number;
-  beforeRef: JsonValue;
-  afterRef: JsonValue;
-  beforeSha: JsonValue;
-  afterSha: JsonValue;
-}) {
-  fs.rmSync(outputDir, { recursive: true, force: true });
-  fs.mkdirSync(outputDir, { recursive: true });
-  copyProofFile(beforeDir, outputDir, "before-loading.png");
-  copyProofFile(beforeDir, outputDir, "before.mp4");
-  copyProofFile(beforeDir, outputDir, "before.png");
-  copyProofFile(afterDir, outputDir, "after-loading.png");
-  copyProofFile(afterDir, outputDir, "after.mp4");
-  copyProofFile(afterDir, outputDir, "after.png");
-  writeCombinedLog(outputDir, "command.log", beforeDir, afterDir);
-  writeCombinedLog(outputDir, "emulator.log", beforeDir, afterDir);
-  writeCombinedLog(outputDir, "app.log", beforeDir, afterDir);
-  fs.writeFileSync(
-    path.join(outputDir, "proof-manifest.json"),
-    `${JSON.stringify(
-      {
-        proof_schema_version: 1,
-        status: "completed",
-        pr: `#${prNumber}`,
-        before: {
-          ref: beforeRef,
-          sha: beforeSha,
-          source: "main",
-        },
-        after: {
-          ref: afterRef,
-          sha: afterSha,
-          source: "fix_pr",
-        },
-        captures: {
-          before: {
-            loading_screenshot: "before-loading.png",
-            screenshot: "before.png",
-            recording: "before.mp4",
-          },
-          after: {
-            loading_screenshot: "after-loading.png",
-            screenshot: "after.png",
-            recording: "after.mp4",
-          },
-        },
-        artifacts: REQUIRED_PROOF_FILES,
-      },
-      null,
-      2,
-    )}\n`,
-  );
-}
-
-function copyProofFile(fromDir: string, toDir: string, name: string) {
-  fs.copyFileSync(path.join(fromDir, name), path.join(toDir, name));
-}
-
-function writeCombinedLog(outputDir: string, name: string, beforeDir: string, afterDir: string) {
-  const before = fs.readFileSync(path.join(beforeDir, name), "utf8");
-  const after = fs.readFileSync(path.join(afterDir, name), "utf8");
-  fs.writeFileSync(
-    path.join(outputDir, name),
-    [`# current main ${name}`, before, "", `# fixed branch ${name}`, after, ""].join("\n"),
-  );
-}
-
-function baseHeadSha(targetDir: string) {
-  return run("git", ["rev-parse", "HEAD"], { cwd: targetDir, timeoutMs: 60_000 }).trim();
 }
 
 function validateProofFiles(proofDir: string) {

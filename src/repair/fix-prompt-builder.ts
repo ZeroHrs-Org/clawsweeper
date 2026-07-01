@@ -92,10 +92,14 @@ function renderTargetSpecificRepairGuidance(fixArtifact: LooseRecord) {
     .toLowerCase();
   if (repo !== "zerohrs-org/zerohrs-app") return "";
   return [
-    "- ZeroHrs mobile feedback proof: run the Android Crabbox proof runner when available and the issue touches mobile UI/runtime behavior;",
-    "- proof must include issue-specific loading screenshots and MP4 recordings: `before-loading.png`, `before.mp4`, `after-loading.png`, and `after.mp4`; launcher or generic start-page screenshots alone are not sufficient;",
-    "- capture before evidence from current `main` and after evidence from this fixed branch before returning, or document the exact proof blocker;",
-    "- when reproducing feedback needs account, app, or database state, seed or mock minimal local dev/test database rows and document the seed; do not use production data.",
+    "- ZeroHrs mobile feedback proof: the executor agent owns issue-specific Android verification when the issue touches mobile UI/runtime behavior;",
+    "- do not hardcode one issue's navigation, text labels, or reproduction path into shared proof scripts such as `scripts/crabbox/android-proof.sh`; choose the reproduction path for this issue during execution and keep reusable scripts generic;",
+    "- capture and save proof media under `reports/clawsweeper/android-proof` before returning; ClawSweeper only collects and publishes that directory after you return;",
+    "- required executor proof files: `proof-manifest.json`, `command.log`, `emulator.log`, `app.log`, `before-loading.png`, `before.mp4`, `after-loading.png`, and `after.mp4`; include `before.png` and `after.png` when practical;",
+    "- `before-*` media must show the current-main reproduction before the fix; `after-*` media must show the same issue path on this fixed branch after the fix; launcher or generic start-page screenshots alone are invalid;",
+    "- the proof manifest should state the issue-specific reproduction route, refs/SHAs or branch names used for before and after, seed/mock commands, and any blocker; set `status` to `completed` only when both before and after media are valid;",
+    "- when reproducing feedback needs account, app, or database state, seed or mock minimal local dev/test database rows and document the seed; do not use production data;",
+    "- keep proof artifacts out of the PR diff; ClawSweeper excludes `reports/clawsweeper/android-proof` from commits and uploads it as workflow evidence.",
   ].join("\n");
 }
 

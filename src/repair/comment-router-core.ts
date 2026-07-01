@@ -585,12 +585,15 @@ function zeroHrsIssueImplementationGuardrails(repo: unknown) {
   indicate mobile feedback, treat the issue as an external user report even when
   the GitHub author is a ZeroHrs maintainer or repository owner.
 - For mobile UI/runtime issues, verify on Android with the target repo Crabbox
-  proof runner. Do not accept Android launcher screenshots or generic start-page
-  captures as sufficient proof.
-- Before opening the PR, attach or reference issue-specific before/after proof:
-  \`before-loading.png\` and \`before.mp4\` from current \`main\`, plus
-  \`after-loading.png\` and \`after.mp4\` from the fixed branch. If proof cannot
-  run, report the exact blocker and do not present the PR as Android-verified.
+  environment when available. During planning/review, capture only current-state
+  reproduction artifacts; there is no after-fix proof yet. Do not accept Android
+  launcher screenshots or generic start-page captures as sufficient proof.
+- The executor agent, not a hardcoded shared script, owns issue-specific proof.
+  It must decide the reproduction path, capture before evidence from current
+  \`main\`, capture after evidence from the fixed branch, and save media under
+  \`reports/clawsweeper/android-proof\` for ClawSweeper to collect and publish.
+  Required execution media are \`before-loading.png\`, \`before.mp4\`,
+  \`after-loading.png\`, and \`after.mp4\`.
 - When reproduction depends on account, app, or database state, seed or mock the
   local dev/test database with the minimum rows needed to reproduce the report,
   document the seed commands or fixture, and never use production data.

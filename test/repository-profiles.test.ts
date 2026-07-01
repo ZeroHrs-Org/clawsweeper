@@ -36,6 +36,15 @@ test("ZeroHrs feedback profile treats maintainer-authored reports as external fe
   assert.match(profile.promptNote, /external user report/);
   assert.match(profile.promptNote, /GitHub issue author is a ZeroHrs maintainer/);
   assert.match(profile.promptNote, /prefer Android Crabbox proof/);
+  assert.match(profile.promptNote, /test credentials from configured secrets/);
+  assert.doesNotMatch(profile.promptNote, /public ZeroHrs test account/);
+  assert.match(
+    profile.promptNote,
+    /During planning\/review, collect current-state reproduction artifacts only/,
+  );
+  assert.match(profile.promptNote, /executor agent decides the issue-specific reproduction path/);
+  assert.match(profile.promptNote, /reports\/clawsweeper\/android-proof/);
+  assert.match(profile.promptNote, /Do not hardcode one issue's path into shared proof scripts/);
   assert.match(profile.promptNote, /before-loading\.png/);
   assert.match(profile.promptNote, /before\.mp4/);
   assert.match(profile.promptNote, /seed or mock data in the local dev\/test database/);

@@ -91,7 +91,7 @@ test("ZeroHrs exact feedback dispatch runs Android proof and syncs a review comm
     workflow,
     /CLAWSWEEPER_COMMENT_AUTHOR_LOGIN: \$\{\{ vars\.CLAWSWEEPER_COMMENT_AUTHOR_LOGIN \|\| 'zebriot' \}\}/,
   );
-  assert.match(reviewJob, /- name: Run ZeroHrs Android feedback proof/);
+  assert.match(reviewJob, /- name: Run ZeroHrs Android feedback review evidence/);
   assert.match(reviewJob, /needs\.plan\.outputs\.target_repo == 'ZeroHrs-Org\/zerohrs-app'/);
   assert.match(reviewJob, /needs\.plan\.outputs\.target_repo == 'zerohrs-org\/zerohrs-app'/);
   assert.match(reviewJob, /ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY/);
@@ -101,9 +101,10 @@ test("ZeroHrs exact feedback dispatch runs Android proof and syncs a review comm
   );
   assert.match(reviewJob, /ZEROHRS_ANDROID_PROOF_PROMPT/);
   assert.match(reviewJob, /before-loading\.png/);
-  assert.match(reviewJob, /after-loading\.png/);
   assert.match(reviewJob, /before\.mp4/);
-  assert.match(reviewJob, /after\.mp4/);
+  assert.match(reviewJob, /current-state reproduction evidence only/);
+  assert.match(reviewJob, /there is no after-fix proof yet/);
+  assert.match(reviewJob, /reports\/clawsweeper\/android-proof/);
   assert.match(reviewJob, /generic start-page screenshots as sufficient/);
   assert.match(reviewJob, /seed\/mock local dev database rows/);
   assert.match(reviewJob, /\.crabbox\/runs\//);

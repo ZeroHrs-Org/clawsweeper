@@ -143,49 +143,41 @@ test("ZeroHrs Android proof workflow runs before issue implementation post-fligh
   assert.match(workflow, /path: \.clawsweeper-repair\/runs\/\*\*\/zerohrs-android-proof\/\*\*/);
 });
 
-test("ZeroHrs Android proof publisher composes before from main and after from PR", () => {
+test("ZeroHrs Android proof publisher collects executor-owned artifacts", () => {
   const source = fs.readFileSync("src/repair/zerohrs-android-proof-media.ts", "utf8");
-  const composeIndex = source.indexOf("function composeBeforeAfterProof(");
-  assert.notEqual(composeIndex, -1);
-  const compose = source.slice(
-    composeIndex,
-    source.indexOf("function copyProofFile(", composeIndex),
+
+  assert.match(
+    source,
+    /const EXECUTOR_PROOF_DIR = path\.join\("zerohrs-android-proof", "executor"\)/,
   );
-
-  assert.match(source, /const baseTargetDir = cloneBaseReference\(baseRefName, proofRoot\)/);
-  assert.match(source, /const fixedTargetDir = clonePullRequest\(parsed\.number, proofRoot\)/);
-  assert.match(compose, /copyProofFile\(beforeDir, outputDir, "before-loading\.png"\)/);
-  assert.match(compose, /copyProofFile\(beforeDir, outputDir, "before\.mp4"\)/);
-  assert.match(compose, /copyProofFile\(afterDir, outputDir, "after-loading\.png"\)/);
-  assert.match(compose, /copyProofFile\(afterDir, outputDir, "after\.mp4"\)/);
-  assert.match(compose, /source: "main"/);
-  assert.match(compose, /source: "fix_pr"/);
+  assert.match(source, /const executorProofDir = path\.join\(runDir, EXECUTOR_PROOF_DIR\)/);
+  assert.match(
+    source,
+    /fs\.cpSync\(executorProofDir, proofDir, \{ recursive: true, force: true \}\)/,
+  );
+  assert.match(
+    source,
+    /executor did not produce Android proof media under reports\/clawsweeper\/android-proof/,
+  );
+  assert.doesNotMatch(source, /run\("crabbox"/);
+  assert.doesNotMatch(source, /scripts\/crabbox\/android-proof\.sh/);
+  assert.doesNotMatch(source, /function clonePullRequest\(/);
+  assert.doesNotMatch(source, /function composeBeforeAfterProof\(/);
 });
 
-test("ZeroHrs Android proof publisher runs Crabbox with terminal success stop policy", () => {
+test("ZeroHrs Android proof publisher blocks when executor proof is missing", () => {
   const source = fs.readFileSync("src/repair/zerohrs-android-proof-media.ts", "utf8");
-  const argsStart = source.indexOf("function zeroHrsAndroidProofRunArgs(");
-  const argsEnd = source.indexOf("function zeroHrsAndroidProofEnv(", argsStart);
-  assert.notEqual(argsStart, -1);
-  assert.notEqual(argsEnd, -1);
-  const helper = source.slice(argsStart, argsEnd);
+  const copyStart = source.indexOf('const proofRoot = path.join(runDir, "zerohrs-android-proof")');
+  const publishStart = source.indexOf("const proofFiles = validateProofFiles(proofDir)", copyStart);
+  assert.notEqual(copyStart, -1);
+  assert.notEqual(publishStart, -1);
+  const collectionBlock = source.slice(copyStart, publishStart);
 
-  assert.match(source, /run\("crabbox", zeroHrsAndroidProofRunArgs\(\)/);
-  assert.match(helper, /"--artifact-glob"/);
-  assert.match(helper, /REQUIRED_REMOTE_PROOF_FILES/);
-  assert.match(helper, /"--stop-after", "success"/);
-  assert.doesNotMatch(helper, /"--stop-after", "never"/);
-});
-
-test("ZeroHrs Android proof publisher extracts Crabbox collected artifacts", () => {
-  const source = fs.readFileSync("src/repair/zerohrs-android-proof-media.ts", "utf8");
-
-  assert.match(source, /function copySourceProofRun\(/);
-  assert.match(source, /function findLatestCrabboxArtifactTarball\(/);
-  assert.match(source, /\.crabbox", "runs"/);
-  assert.match(source, /"-artifacts\.tgz"/);
-  assert.match(source, /"tar", \["-xzf", artifactPath/);
-  assert.match(source, /"reports\/crabbox-android"/);
+  assert.match(collectionBlock, /if \(!fs\.existsSync\(executorProofDir\)\)/);
+  assert.match(collectionBlock, /status: "blocked"/);
+  assert.match(collectionBlock, /expected_executor_path: "reports\/clawsweeper\/android-proof"/);
+  assert.match(collectionBlock, /fs\.rmSync\(proofDir, \{ recursive: true, force: true \}\)/);
+  assert.match(collectionBlock, /fs\.mkdirSync\(proofDir, \{ recursive: true \}\)/);
 });
 
 test("ZeroHrs Android proof comments prefer GitHub attachments with private-repo-safe fallbacks", () => {

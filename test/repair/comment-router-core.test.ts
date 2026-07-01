@@ -971,8 +971,10 @@ test("renderIssueImplementationJob keeps soft Execute Plan overrides in the fix 
   assert.deepEqual(job.frontmatter.blocked_actions, ["close", "merge"]);
   assert.match(job.body, /soft blocker/);
   assert.match(job.body, /repair_strategy: "new_fix_pr"/);
-  assert.match(job.body, /ZeroHrs Crabbox Android proof job/);
+  assert.match(job.body, /planning\/review, capture only current-state/);
   assert.match(job.body, /treat the issue as an external user report/);
+  assert.match(job.body, /executor agent, not a hardcoded shared script/);
+  assert.match(job.body, /reports\/clawsweeper\/android-proof/);
   assert.match(job.body, /before-loading\.png/);
   assert.match(job.body, /before\.mp4/);
   assert.match(job.body, /after-loading\.png/);

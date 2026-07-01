@@ -1294,7 +1294,7 @@ jobs:
         id: shard-start
         run: echo "started_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
-      - name: Run ZeroHrs Android feedback proof
+      - name: Run ZeroHrs Android feedback review evidence
         if: ${{ needs.plan.outputs.target_repo == 'ZeroHrs-Org/zerohrs-app' || needs.plan.outputs.target_repo == 'zerohrs-org/zerohrs-app' }}
         id: zerohrs-android-proof
         continue-on-error: true
@@ -1321,11 +1321,11 @@ jobs:
           write_proof_prompt_env() {
             {
               echo "ZEROHRS_ANDROID_PROOF_PROMPT<<EOF"
-              echo "ZeroHrs Android Crabbox proof was run before this review for $TARGET_REPO#$item_number."
-              echo "Inspect these target checkout artifacts before deciding: reports/crabbox-android/proof-manifest.json, command.log, emulator.log, app.log, before-loading.png, after-loading.png, before.mp4, after.mp4, before.png, and after.png."
+              echo "ZeroHrs Android Crabbox review evidence was run before this planning review for $TARGET_REPO#$item_number."
+              echo "Inspect these target checkout artifacts before deciding: reports/crabbox-android/proof-manifest.json, command.log, emulator.log, app.log, before-loading.png, before.mp4, and before.png."
               echo "Mention the ClawSweeper workflow artifact named zerohrs-android-proof-${{ matrix.shard }} and run URL $RUN_URL in the evidence or plan when relevant."
-              echo "If the proof manifest status is completed and the loading screenshots plus MP4 recordings are issue-specific, treat the issue as Android-verified. Do not treat Android launcher or generic start-page screenshots as sufficient. If proof is blocked or failed, keep the issue open and put the blocker plus next proof step in the plan."
-              echo "For implementation PRs, require before evidence from main and after evidence from the fixed branch. When reproduction needs account or app state, seed/mock local dev database rows and document the seed instead of using production data."
+              echo "Planning/review evidence is current-state reproduction evidence only; there is no after-fix proof yet. Do not treat Android launcher or generic start-page screenshots as sufficient. If proof is blocked or failed, keep the issue open and put the blocker plus next proof step in the plan."
+              echo "For implementation PRs, the executor coding agent must decide the issue-specific reproduction path and capture before evidence from main plus after evidence from the fixed branch under reports/clawsweeper/android-proof. When reproduction needs account or app state, seed/mock local dev database rows and document the seed instead of using production data."
               echo "EOF"
             } >> "$GITHUB_ENV"
           }
@@ -1344,11 +1344,8 @@ jobs:
               "emulator.log",
               "app.log",
               "before-loading.png",
-              "after-loading.png",
               "before.mp4",
-              "after.mp4",
-              "before.png",
-              "after.png"
+              "before.png"
             ]
           }
           JSON
@@ -1362,16 +1359,16 @@ jobs:
             printf 'video proof unavailable; see proof-manifest.json and command.log\n' > "$path"
           }
           write_placeholder_proof_artifacts() {
-            for artifact in before-loading.png after-loading.png before.png after.png; do
+            for artifact in before-loading.png before.png; do
               [ -f "$proof_dir/$artifact" ] || write_placeholder_png "$proof_dir/$artifact"
             done
-            for artifact in before.mp4 after.mp4; do
+            for artifact in before.mp4; do
               [ -f "$proof_dir/$artifact" ] || write_placeholder_mp4 "$proof_dir/$artifact"
             done
           }
           ensure_local_proof_artifacts() {
             missing=0
-            for artifact in before-loading.png after-loading.png before.png after.png before.mp4 after.mp4; do
+            for artifact in before-loading.png before.png before.mp4; do
               if [ ! -f "reports/crabbox-android/$artifact" ]; then
                 missing=1
               fi
@@ -1452,27 +1449,22 @@ jobs:
               --static-port 22 \
               --static-work-root /work/crabbox \
               --no-hydrate \
-              --label "ZeroHrs Android feedback proof for #$item_number" \
+              --label "ZeroHrs Android feedback review evidence for #$item_number" \
               --artifact-glob "reports/crabbox-android/**" \
               --require-artifact "reports/crabbox-android/proof-manifest.json" \
+              --require-artifact "reports/crabbox-android/command.log" \
               --require-artifact "reports/crabbox-android/emulator.log" \
               --require-artifact "reports/crabbox-android/app.log" \
               --require-artifact "reports/crabbox-android/before-loading.png" \
-              --require-artifact "reports/crabbox-android/after-loading.png" \
               --require-artifact "reports/crabbox-android/before.mp4" \
-              --require-artifact "reports/crabbox-android/after.mp4" \
               --require-artifact "reports/crabbox-android/before.png" \
-              --require-artifact "reports/crabbox-android/after.png" \
               --download "reports/crabbox-android/proof-manifest.json=reports/crabbox-android/proof-manifest.json" \
               --download "reports/crabbox-android/command.log=reports/crabbox-android/command.log" \
               --download "reports/crabbox-android/emulator.log=reports/crabbox-android/emulator.log" \
               --download "reports/crabbox-android/app.log=reports/crabbox-android/app.log" \
               --download "reports/crabbox-android/before-loading.png=reports/crabbox-android/before-loading.png" \
-              --download "reports/crabbox-android/after-loading.png=reports/crabbox-android/after-loading.png" \
               --download "reports/crabbox-android/before.mp4=reports/crabbox-android/before.mp4" \
-              --download "reports/crabbox-android/after.mp4=reports/crabbox-android/after.mp4" \
               --download "reports/crabbox-android/before.png=reports/crabbox-android/before.png" \
-              --download "reports/crabbox-android/after.png=reports/crabbox-android/after.png" \
               --stop-after never \
               --shell \
               -- \
