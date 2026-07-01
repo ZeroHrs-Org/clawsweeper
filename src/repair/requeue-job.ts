@@ -60,7 +60,7 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-const mode = requestedMode ?? resolved.mode ?? job.frontmatter.mode;
+const mode = resolveDispatchMode(requestedMode ?? resolved.mode ?? job.frontmatter.mode, job);
 if (!["plan", "execute", "autonomous"].includes(mode)) {
   throw new Error(`unsupported mode: ${mode}`);
 }
@@ -183,6 +183,13 @@ function dispatchJob(jobPath: string, mode: string) {
   if (result.status !== 0) {
     throw new Error(`failed to dispatch ${jobPath}: ${result.stderr || result.stdout}`);
   }
+}
+
+function resolveDispatchMode(mode: JsonValue, job: ReturnType<typeof parseJob>) {
+  const requested = String(mode ?? "");
+  const jobMode = String(job.frontmatter.mode ?? "");
+  if (requested === "execute" && jobMode === "autonomous") return "autonomous";
+  return requested;
 }
 
 function waitForStartedRuns({ expectedCount, headSha, since }: LooseRecord) {

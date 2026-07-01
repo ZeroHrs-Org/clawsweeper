@@ -1016,6 +1016,12 @@ test("repair workers hydrate only durable jobs from generated state", () => {
   assert.match(workflow, /CLAWSWEEPER_STEERABLE_CODEX/);
   assert.match(workflow, /actions\/cache\/restore@v5/);
   assert.match(workflow, /actions\/cache\/save@v5/);
+  assert.equal(workflow.match(/- name: Resolve worker mode/g)?.length, 2);
+  assert.match(workflow, /requested === "execute" && jobMode === "autonomous"/);
+  assert.match(workflow, /worker_mode="\$\{\{ steps\.worker_mode\.outputs\.mode \}\}"/);
+  assert.match(workflow, /--mode "\$\{\{ steps\.worker_mode\.outputs\.mode \}\}"/);
+  assert.match(requeue, /function resolveDispatchMode/);
+  assert.match(requeue, /requested === "execute" && jobMode === "autonomous"/);
   assert.match(workflow, /repair:action-session -- register/);
   assert.match(workflow, /completion-reason gates_passed/);
   assert.match(workflow, /post_flight_report=.*post-flight-report\.json/);

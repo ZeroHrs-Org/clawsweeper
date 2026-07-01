@@ -311,6 +311,31 @@ jobs:
           CLAWSWEEPER_ALLOWED_OWNER: ${{ steps.target.outputs.target_owner }}
         run: pnpm run repair:validate-job -- "${{ inputs.job }}"
 
+      - name: Resolve worker mode
+        id: worker_mode
+        if: ${{ steps.check_job.outputs.job_exists == '1' }}
+        env:
+          JOB_PATH: ${{ inputs.job }}
+          REQUESTED_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          mode="$(
+            node --input-type=module <<'NODE'
+          import { parseJob, validateJob } from "./dist/repair/lib.js";
+
+          const requested = process.env.REQUESTED_MODE || "plan";
+          const job = parseJob(process.env.JOB_PATH);
+          const errors = validateJob(job);
+          if (errors.length > 0) {
+            throw new Error(errors.join("\n"));
+          }
+          const jobMode = String(job.frontmatter.mode || "");
+          const mode = requested === "execute" && jobMode === "autonomous" ? "autonomous" : requested;
+          process.stdout.write(mode);
+          NODE
+          )"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
       - name: Verify self-heal head
         id: self_heal_head
         if: ${{ steps.check_job.outputs.job_exists == '1' }}
@@ -338,7 +363,7 @@ jobs:
           GH_TOKEN: ${{ steps.app_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_ALLOWED_OWNER: ${{ steps.target.outputs.target_owner }}
         run: |
-          worker_mode="${{ inputs.mode }}"
+          worker_mode="${{ steps.worker_mode.outputs.mode }}"
           if [ "$worker_mode" != "plan" ] && [ "${CLAWSWEEPER_ALLOW_EXECUTE}" != "1" ]; then
             echo "CLAWSWEEPER_ALLOW_EXECUTE is not explicitly 1; rendering plan-only output for requested $worker_mode run"
             worker_mode="plan"
@@ -665,6 +690,31 @@ jobs:
           CLAWSWEEPER_ALLOWED_OWNER: ${{ steps.target.outputs.target_owner }}
         run: pnpm run repair:validate-job -- "${{ inputs.job }}"
 
+      - name: Resolve worker mode
+        id: worker_mode
+        if: ${{ steps.check_job.outputs.job_exists == '1' }}
+        env:
+          JOB_PATH: ${{ inputs.job }}
+          REQUESTED_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          mode="$(
+            node --input-type=module <<'NODE'
+          import { parseJob, validateJob } from "./dist/repair/lib.js";
+
+          const requested = process.env.REQUESTED_MODE || "plan";
+          const job = parseJob(process.env.JOB_PATH);
+          const errors = validateJob(job);
+          if (errors.length > 0) {
+            throw new Error(errors.join("\n"));
+          }
+          const jobMode = String(job.frontmatter.mode || "");
+          const mode = requested === "execute" && jobMode === "autonomous" ? "autonomous" : requested;
+          process.stdout.write(mode);
+          NODE
+          )"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
       - name: Verify self-heal head
         id: self_heal_head
         if: ${{ steps.check_job.outputs.job_exists == '1' }}
@@ -862,7 +912,7 @@ jobs:
           set -euo pipefail
           echo "Requeueing ${{ steps.repair_requeue.outputs.count }} source-head race repair result(s) against the latest head."
           pnpm run repair:requeue -- "${{ inputs.job }}" \
-            --mode "${{ inputs.mode }}" \
+            --mode "${{ steps.worker_mode.outputs.mode }}" \
             --execute \
             --open-execute-window \
             --wait-for-capacity \
