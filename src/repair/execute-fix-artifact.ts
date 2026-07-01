@@ -165,6 +165,10 @@ const EXECUTOR_ANDROID_REQUIRED_PROOF_FILES = [
   "before.png",
   "after.png",
 ];
+const PROOF_ARTIFACT_GIT_PATHS = [
+  EXECUTOR_ANDROID_PROOF_SOURCE_DIR,
+  LEGACY_ANDROID_PROOF_SOURCE_DIR,
+];
 const PROOF_ARTIFACT_GIT_EXCLUDE_PATHS = [
   `:(exclude)${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/**`,
   `:(exclude)${LEGACY_ANDROID_PROOF_SOURCE_DIR}/**`,
@@ -3448,14 +3452,25 @@ function checkoutRecoverableReplacementBranch({
 function commitCheckpointIfNeeded({ targetDir, message, trailers = [] }: LooseRecord) {
   restoreZeroHrsIssueProofHarness({ targetDir });
   if (!committableGitStatus({ targetDir }).trim()) return "";
-  run("git", ["add", "--all", "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS], {
+  run("git", ["add", "--all", "--", "."], {
     cwd: targetDir,
   });
+  unstageProofArtifactPaths({ targetDir });
   if (!run("git", ["diff", "--cached", "--name-only"], { cwd: targetDir }).trim()) return "";
   const args = ["commit", "-m", message];
   for (const trailer of uniqueStrings(trailers)) args.push("-m", trailer);
   runGitNetwork(args, targetDir);
   return run("git", ["rev-parse", "HEAD"], { cwd: targetDir }).trim();
+}
+
+function unstageProofArtifactPaths({ targetDir }: { targetDir: string }) {
+  const stagedProofArtifacts = run(
+    "git",
+    ["diff", "--cached", "--name-only", "--", ...PROOF_ARTIFACT_GIT_PATHS],
+    { cwd: targetDir },
+  ).trim();
+  if (!stagedProofArtifacts) return;
+  run("git", ["reset", "-q", "HEAD", "--", ...PROOF_ARTIFACT_GIT_PATHS], { cwd: targetDir });
 }
 
 function committableGitStatus({ targetDir }: { targetDir: string }) {

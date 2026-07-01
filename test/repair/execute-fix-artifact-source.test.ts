@@ -205,6 +205,8 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   );
   const checkpointStart = source.indexOf("function commitCheckpointIfNeeded(");
   const checkpointEnd = source.indexOf("function committableGitStatus(", checkpointStart);
+  const unstageStart = source.indexOf("function unstageProofArtifactPaths(");
+  const unstageEnd = source.indexOf("function committableGitStatus(", unstageStart);
   const restoreStart = source.indexOf("function restoreZeroHrsIssueProofHarness(");
   const restoreEnd = source.indexOf("function isZeroHrsIssueImplementation(", restoreStart);
   const sourceStart = source.indexOf("function zeroHrsProofHarnessRestoreSource(");
@@ -212,14 +214,20 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
 
   assert.notEqual(checkpointStart, -1);
   assert.notEqual(checkpointEnd, -1);
+  assert.notEqual(unstageStart, -1);
+  assert.notEqual(unstageEnd, -1);
   assert.notEqual(restoreStart, -1);
   assert.notEqual(restoreEnd, -1);
   assert.notEqual(sourceStart, -1);
   assert.notEqual(proofRequirementStart, -1);
 
   const checkpoint = source.slice(checkpointStart, checkpointEnd);
+  const unstage = source.slice(unstageStart, unstageEnd);
   const restore = source.slice(restoreStart, restoreEnd);
   const sourceHelper = source.slice(sourceStart, source.indexOf("function pushRecoverableBranch("));
+  const proofPathStart = source.indexOf("const PROOF_ARTIFACT_GIT_PATHS = [");
+  const proofPathEnd = source.indexOf("];", proofPathStart);
+  const proofPaths = source.slice(proofPathStart, proofPathEnd);
   const proofExcludeStart = source.indexOf("const PROOF_ARTIFACT_GIT_EXCLUDE_PATHS = [");
   const proofExcludeEnd = source.indexOf("];", proofExcludeStart);
   const proofExcludes = source.slice(proofExcludeStart, proofExcludeEnd);
@@ -238,6 +246,8 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /scripts\/crabbox\/android-proof\.sh/);
   assert.match(source, /scripts\/crabbox\/run-android-proof\.sh/);
   assert.match(source, /docs\/crabbox-hetzner-feedback\.md/);
+  assert.match(proofPaths, /EXECUTOR_ANDROID_PROOF_SOURCE_DIR/);
+  assert.match(proofPaths, /LEGACY_ANDROID_PROOF_SOURCE_DIR/);
   assert.match(proofExcludes, /EXECUTOR_ANDROID_PROOF_SOURCE_DIR/);
   assert.match(proofExcludes, /LEGACY_ANDROID_PROOF_SOURCE_DIR/);
   assert.doesNotMatch(proofExcludes, /ZEROHRS_ANDROID_PROOF_HARNESS_FILES/);
@@ -248,6 +258,18 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
       checkpoint.indexOf('run("git", ["add"'),
     "protected proof harness files must be restored before staging",
   );
+  assert.match(checkpoint, /run\("git", \["add", "--all", "--", "\."\]/);
+  assert.doesNotMatch(
+    checkpoint,
+    /"add", "--all", "--", "\.", \.\.\.PROOF_ARTIFACT_GIT_EXCLUDE_PATHS/,
+  );
+  assert.ok(
+    checkpoint.indexOf('run("git", ["add"') <
+      checkpoint.indexOf("unstageProofArtifactPaths({ targetDir });"),
+    "proof artifacts must be unstaged after normal git add so ignored proof dirs do not crash git add",
+  );
+  assert.match(unstage, /"diff", "--cached", "--name-only", "--", \.\.\.PROOF_ARTIFACT_GIT_PATHS/);
+  assert.match(unstage, /"reset", "-q", "HEAD", "--", \.\.\.PROOF_ARTIFACT_GIT_PATHS/);
   assert.match(restore, /isZeroHrsIssueImplementation\(\)/);
   assert.match(restore, /zeroHrsProofHarnessRestoreSource\(targetDir\)/);
   assert.match(restore, /git", \["diff", "--name-only", restoreSource/);
