@@ -12,6 +12,19 @@ Required target repository secret:
 
 The token needs enough scope to dispatch workflows in this repository and, for the v1 bootstrap model, to read/write issues, branches, and pull requests in `ZeroHrs-Org/zerohrs-app`.
 
+Required ClawSweeper repository secrets for Android proof:
+
+- `ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN`
+- `HETZNER_IPV4`
+- `ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY`
+- `ZEROHRS_HETZNER_KNOWN_HOSTS`
+- `ZEROHRS_TEST_EMAIL`
+- `ZEROHRS_TEST_PASSWORD`
+
+Optional ClawSweeper repository secret:
+
+- `ZEROHRS_ANDROID_GOOGLE_SERVICES_JSON_B64`
+
 ## Runner
 
 ZeroHrs mobile feedback proof should use the target repo's `android-proof` Crabbox job on the static Hetzner SSH host.

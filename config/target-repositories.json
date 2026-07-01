@@ -6,7 +6,7 @@
       "display_name": "ZeroHrs",
       "checkout_dir": "zerohrs-app",
       "community_url": "https://zerohrs.com/",
-      "prompt_note": "Use the ZeroHrs monorepo source tree and current main branch. Feedback-created issues come from mobile users and should be reviewed conservatively: verify the issue against current code, prefer Android Crabbox proof for mobile UI/runtime claims, keep issues open unless current main clearly implements the requested behavior, and create implementation PRs only after a maintainer command. Android proof may use the public ZeroHrs test account from the target repo Crabbox docs: sid@zerohrs.com with password Cooking@9098.",
+      "prompt_note": "Use the ZeroHrs monorepo source tree and current main branch. Feedback-created issues come from mobile users and should be reviewed conservatively: if labels/body/admin metadata indicate a feedback report, treat it as an external user report even when the GitHub issue author is a ZeroHrs maintainer or repository owner. Verify the issue against current code, prefer Android Crabbox proof for mobile UI/runtime claims, keep issues open unless current main clearly implements the requested behavior, and create implementation PRs only after a maintainer command. Android proof may use the public ZeroHrs test account from the target repo Crabbox docs: sid@zerohrs.com with password Cooking@9098.",
       "apply_close_rules": {
         "issue": ["implemented_on_main"],
         "pull_request": ["implemented_on_main", "mostly_implemented_on_main"]

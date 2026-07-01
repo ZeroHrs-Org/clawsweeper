@@ -137,6 +137,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CLAWSWEEPER_APP_CLIENT_ID: Iv23liOECG0slfuhz093
   CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' && '1' || '0' }}
+  CLAWSWEEPER_COMMENT_AUTHOR_LOGIN: ${{ vars.CLAWSWEEPER_COMMENT_AUTHOR_LOGIN || 'zebriot' }}
   CLAWSWEEPER_MODEL: ${{ secrets.CLAWSWEEPER_MODEL || vars.CLAWSWEEPER_MODEL || 'gpt-5.5' }}
   ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN: ${{ secrets.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN }}
   CLAWSWEEPER_WEBHOOK_SECRET_PRESENT: ${{ secrets.CLAWSWEEPER_WEBHOOK_SECRET != '' && '1' || '0' }}
@@ -956,6 +957,7 @@ jobs:
         run: |
           target_slug="${{ steps.target.outputs.target_repo }}"
           target_slug="${target_slug//\//-}"
+          target_slug="${target_slug,,}"
           pnpm run status -- \
             --target-repo "${{ steps.target.outputs.target_repo }}" \
             --state "Planning review" \
@@ -1158,6 +1160,7 @@ jobs:
         run: |
           target_slug="$TARGET_REPO"
           target_slug="${target_slug//\//-}"
+          target_slug="${target_slug,,}"
           pnpm run status -- \
             --target-repo "$TARGET_REPO" \
             --state "${{ steps.mode.outputs.hot_intake == 'true' && 'Hot intake in progress' || 'Review in progress' }}" \
@@ -1291,6 +1294,158 @@ jobs:
         id: shard-start
         run: echo "started_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
+      - name: Run ZeroHrs Android feedback proof
+        if: ${{ needs.plan.outputs.target_repo == 'ZeroHrs-Org/zerohrs-app' || needs.plan.outputs.target_repo == 'zerohrs-org/zerohrs-app' }}
+        id: zerohrs-android-proof
+        continue-on-error: true
+        timeout-minutes: 75
+        env:
+          GH_TOKEN: ${{ steps.target-read-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
+          TARGET_REPO: ${{ needs.plan.outputs.target_repo }}
+          TARGET_DIR: ${{ needs.plan.outputs.target_checkout_dir }}
+          ITEM_NUMBERS: ${{ matrix.item_numbers }}
+          CRABBOX_VERSION: ${{ vars.CLAWSWEEPER_CRABBOX_VERSION || '0.33.0' }}
+          HETZNER_IPV4: ${{ secrets.HETZNER_IPV4 }}
+          ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY: ${{ secrets.ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY }}
+          ZEROHRS_HETZNER_KNOWN_HOSTS: ${{ secrets.ZEROHRS_HETZNER_KNOWN_HOSTS }}
+          ZEROHRS_TEST_EMAIL: ${{ secrets.ZEROHRS_TEST_EMAIL }}
+          ZEROHRS_TEST_PASSWORD: ${{ secrets.ZEROHRS_TEST_PASSWORD }}
+          ZEROHRS_ANDROID_GOOGLE_SERVICES_JSON_B64: ${{ secrets.ZEROHRS_ANDROID_GOOGLE_SERVICES_JSON_B64 }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          item_number="$ITEM_NUMBERS"
+          target_abs="$PWD/$TARGET_DIR"
+          proof_dir="$target_abs/reports/crabbox-android"
+          mkdir -p "$proof_dir"
+          write_proof_prompt_env() {
+            {
+              echo "ZEROHRS_ANDROID_PROOF_PROMPT<<EOF"
+              echo "ZeroHrs Android Crabbox proof was run before this review for $TARGET_REPO#$item_number."
+              echo "Inspect these target checkout artifacts before deciding: reports/crabbox-android/proof-manifest.json, command.log, emulator.log, app.log, before.png, and after.png."
+              echo "Mention the ClawSweeper workflow artifact named zerohrs-android-proof-${{ matrix.shard }} and run URL $RUN_URL in the evidence or plan when relevant."
+              echo "If the proof manifest status is completed, treat the issue as Android-verified. If it is blocked or failed, keep the issue open and put the blocker plus next proof step in the plan."
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+          }
+          write_local_proof_manifest() {
+            local status="$1"
+            local reason="$2"
+            cat > "$proof_dir/proof-manifest.json" <<JSON
+          {
+            "status": "$status",
+            "reason": "$reason",
+            "run_url": "$RUN_URL",
+            "item_number": "$item_number",
+            "artifacts": [
+              "proof-manifest.json",
+              "command.log",
+              "emulator.log",
+              "app.log",
+              "before.png",
+              "after.png"
+            ]
+          }
+          JSON
+          }
+          write_placeholder_png() {
+            local path="$1"
+            printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=' | base64 --decode > "$path"
+          }
+          if ! printf '%s' "$item_number" | grep -Eq '^[0-9]+$'; then
+            echo "Skipping Android proof because this shard is not a single issue: $ITEM_NUMBERS"
+            exit 0
+          fi
+          labels="$(gh issue view "$item_number" --repo "$TARGET_REPO" --json labels --jq '.labels[].name' || true)"
+          if ! printf '%s\n' "$labels" | grep -Fxq "feedback"; then
+            echo "Skipping Android proof because $TARGET_REPO#$item_number is not labeled feedback."
+            exit 0
+          fi
+          if ! printf '%s\n' "$labels" | grep -Eiq '^(mobile|android)$'; then
+            echo "Skipping Android proof because $TARGET_REPO#$item_number is not labeled mobile/android."
+            exit 0
+          fi
+          if [ -z "${HETZNER_IPV4:-}" ] || [ -z "${ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY:-}" ]; then
+            echo "::warning::Missing Hetzner Android proof secrets; review will record a blocked proof."
+            printf 'missing Hetzner Android proof secrets\n' > "$proof_dir/command.log"
+            printf 'not started\n' > "$proof_dir/emulator.log"
+            printf 'not started\n' > "$proof_dir/app.log"
+            write_placeholder_png "$proof_dir/before.png"
+            write_placeholder_png "$proof_dir/after.png"
+            write_local_proof_manifest "blocked" "missing Hetzner Android proof secrets"
+            write_proof_prompt_env
+            exit 0
+          fi
+
+          mkdir -p "$HOME/.local/bin" "$HOME/.ssh" "$target_abs/.local"
+          chmod 700 "$HOME/.ssh" "$target_abs/.local"
+          if [ -n "${ZEROHRS_HETZNER_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$ZEROHRS_HETZNER_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          else
+            ssh-keyscan -T 15 -t ecdsa,ed25519,rsa "$HETZNER_IPV4" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          fi
+          chmod 600 "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY" > "$target_abs/.local/crabbox_hetzner_ed25519"
+          chmod 600 "$target_abs/.local/crabbox_hetzner_ed25519"
+
+          if ! command -v crabbox >/dev/null 2>&1; then
+            tmpdir="$(mktemp -d)"
+            archive="crabbox_${CRABBOX_VERSION}_linux_amd64.tar.gz"
+            curl -fsSL "https://github.com/openclaw/crabbox/releases/download/v${CRABBOX_VERSION}/${archive}" -o "$tmpdir/crabbox.tar.gz"
+            tar -xzf "$tmpdir/crabbox.tar.gz" -C "$tmpdir"
+            crabbox_bin="$(find "$tmpdir" -type f -name crabbox -perm -111 | head -n 1)"
+            if [ -z "$crabbox_bin" ]; then
+              echo "Unable to find crabbox binary in release archive." >&2
+              exit 1
+            fi
+            install -m 0755 "$crabbox_bin" "$HOME/.local/bin/crabbox"
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+
+          (
+            cd "$target_abs"
+            mkdir -p reports/crabbox-android
+            export CRABBOX_SSH_KEY="$PWD/.local/crabbox_hetzner_ed25519"
+            if ! crabbox run \
+              --reclaim \
+              --provider ssh \
+              --target linux \
+              --static-host "$HETZNER_IPV4" \
+              --static-user crabbox \
+              --static-port 22 \
+              --static-work-root /work/crabbox \
+              --no-hydrate \
+              --label "ZeroHrs Android feedback proof for #$item_number" \
+              --artifact-glob "reports/crabbox-android/**" \
+              --require-artifact "reports/crabbox-android/proof-manifest.json" \
+              --require-artifact "reports/crabbox-android/emulator.log" \
+              --require-artifact "reports/crabbox-android/app.log" \
+              --require-artifact "reports/crabbox-android/before.png" \
+              --require-artifact "reports/crabbox-android/after.png" \
+              --download "reports/crabbox-android/proof-manifest.json=reports/crabbox-android/proof-manifest.json" \
+              --download "reports/crabbox-android/command.log=reports/crabbox-android/command.log" \
+              --download "reports/crabbox-android/emulator.log=reports/crabbox-android/emulator.log" \
+              --download "reports/crabbox-android/app.log=reports/crabbox-android/app.log" \
+              --download "reports/crabbox-android/before.png=reports/crabbox-android/before.png" \
+              --download "reports/crabbox-android/after.png=reports/crabbox-android/after.png" \
+              --stop-after never \
+              --shell \
+              -- \
+              "bash scripts/crabbox/android-proof.sh"; then
+              echo "::warning::Android Crabbox proof failed; review will inspect the local failure manifest if artifacts were downloaded."
+              if [ ! -f reports/crabbox-android/proof-manifest.json ]; then
+                write_local_proof_manifest "failed" "crabbox run failed before proof artifacts were downloaded"
+                printf 'crabbox run failed before proof artifacts were downloaded\n' > reports/crabbox-android/command.log
+                printf 'not downloaded\n' > reports/crabbox-android/emulator.log
+                printf 'not downloaded\n' > reports/crabbox-android/app.log
+                write_placeholder_png reports/crabbox-android/before.png
+                write_placeholder_png reports/crabbox-android/after.png
+              fi
+            fi
+          )
+          write_proof_prompt_env
+
       - name: Review shard
         id: review-shard
         continue-on-error: true
@@ -1304,9 +1459,17 @@ jobs:
           if [ "${{ needs.plan.outputs.hot_intake }}" = "true" ]; then
             hot_intake_arg=(--hot-intake)
           fi
+          combined_prompt="$ADDITIONAL_PROMPT"
+          if [ -n "$ZEROHRS_ANDROID_PROOF_PROMPT" ]; then
+            if [ -n "$combined_prompt" ]; then
+              combined_prompt="$(printf '%s\n\n%s' "$combined_prompt" "$ZEROHRS_ANDROID_PROOF_PROMPT")"
+            else
+              combined_prompt="$ZEROHRS_ANDROID_PROOF_PROMPT"
+            fi
+          fi
           additional_prompt_arg=()
-          if [ -n "$ADDITIONAL_PROMPT" ]; then
-            additional_prompt_arg=(--additional-prompt "$ADDITIONAL_PROMPT")
+          if [ -n "$combined_prompt" ]; then
+            additional_prompt_arg=(--additional-prompt "$combined_prompt")
           fi
           codex_timeout_seconds=$(((${{ needs.plan.outputs.codex_timeout_ms }} + 999) / 1000))
           review_timeout_seconds=$(((codex_timeout_seconds + 180) * ${{ needs.plan.outputs.batch_size }}))
@@ -1391,6 +1554,13 @@ jobs:
         with:
           name: review-metrics-${{ matrix.shard }}
           path: review-artifacts/metrics/shard-${{ matrix.shard }}.json
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: zerohrs-android-proof-${{ matrix.shard }}
+          path: ${{ needs.plan.outputs.target_checkout_dir }}/reports/crabbox-android/**
           if-no-files-found: ignore
 
   publish:
@@ -1493,6 +1663,7 @@ jobs:
         run: |
           target_slug="$TARGET_REPO"
           target_slug="${target_slug//\//-}"
+          target_slug="${target_slug,,}"
           if [ "$HOT_INTAKE" = "true" ] && [ -z "$EXACT_ITEM" ]; then
             echo "Skipping full reconcile for broad hot-intake publish."
           else
@@ -1514,6 +1685,7 @@ jobs:
         run: |
           set -euo pipefail
           target_slug="${TARGET_REPO//\//-}"
+          target_slug="${target_slug,,}"
           if [ -z "$MAX_DISPATCH" ]; then
             MAX_DISPATCH="$(pnpm run --silent workflow -- limit issue_implementation.dispatches_per_sweep_default)"
           fi
@@ -1570,6 +1742,7 @@ jobs:
         run: |
           set -euo pipefail
           target_slug="${TARGET_REPO//\//-}"
+          target_slug="${target_slug,,}"
           if [ -z "$MAX_DISPATCH" ]; then
             MAX_DISPATCH="$(pnpm run --silent workflow -- limit issue_implementation.dispatches_per_sweep_default)"
           fi
@@ -1625,6 +1798,7 @@ jobs:
         run: |
           set -euo pipefail
           target_slug="${TARGET_REPO//\//-}"
+          target_slug="${target_slug,,}"
           if [ -z "$MAX_DISPATCH" ]; then
             MAX_DISPATCH="$(pnpm run --silent workflow -- limit issue_implementation.dispatches_per_sweep_default)"
           fi
@@ -1690,7 +1864,7 @@ jobs:
           echo "::warning::Unable to dispatch background comment sync after three attempts; apply/comment-sync backstops can pick it up later."
 
       - name: Sync selected review comments
-        if: ${{ success() && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && ((github.event_name == 'repository_dispatch' && github.event.action != 'clawsweeper_target_sweep') || github.event.inputs.item_number != '' || github.event.inputs.item_numbers != '') }}
+        if: ${{ success() && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && ((github.event_name == 'repository_dispatch' && (github.event.action != 'clawsweeper_target_sweep' || github.event.client_payload.item_number != '')) || github.event.inputs.item_number != '' || github.event.inputs.item_numbers != '') }}
         timeout-minutes: 15
         env:
           GH_TOKEN: ${{ steps.target-write-token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
@@ -1700,6 +1874,7 @@ jobs:
           test -n "$GH_TOKEN"
           target_slug="$TARGET_REPO"
           target_slug="${target_slug//\//-}"
+          target_slug="${target_slug,,}"
           item_numbers="$(pnpm run --silent workflow -- artifact-item-numbers --artifact-dir artifacts)"
           if [ -z "$item_numbers" ]; then
             echo "No review artifacts to sync comments for."
@@ -1757,6 +1932,7 @@ jobs:
           test -n "$GH_TOKEN"
           target_slug="$TARGET_REPO"
           target_slug="${target_slug//\//-}"
+          target_slug="${target_slug,,}"
           item_numbers="$(pnpm run --silent workflow -- artifact-item-numbers --artifact-dir artifacts)"
           if [ -z "$item_numbers" ]; then
             echo "No review artifacts to apply."
@@ -2095,6 +2271,7 @@ jobs:
         run: |
           target_slug="$TARGET_REPO"
           target_slug="${target_slug//\//-}"
+          target_slug="${target_slug,,}"
           pnpm run repair:publish-main -- \
             --message "chore: update sweep audit state" \
             --path README.md \
@@ -2235,6 +2412,7 @@ jobs:
             if [ "$sync_open_pr_batch" = "true" ]; then
               target_slug="$TARGET_REPO"
               target_slug="${target_slug//\//-}"
+              target_slug="${target_slug,,}"
               cursor_path="results/comment-sync-cursors/${target_slug}.json"
               sync_batch_size="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply_limit || '25' }}"
               batch_env=".artifacts/apply-preselect-comment-sync-batch.env"
@@ -2318,6 +2496,7 @@ jobs:
           comment_sync_min_age_days="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply_comment_sync_min_age_days || '7' }}"
           target_slug="$TARGET_REPO"
           target_slug="${target_slug//\//-}"
+          target_slug="${target_slug,,}"
           cursor_path="results/comment-sync-cursors/${target_slug}.json"
           next_cursor=""
           if [ "$sync_open_pr_batch" = "true" ]; then
@@ -2578,6 +2757,7 @@ jobs:
           fi
           target_slug="$APPLY_TARGET_REPO"
           target_slug="${target_slug//\//-}"
+          target_slug="${target_slug,,}"
           publish_args=(
             --message "chore: apply sweep decisions"
             --path "records/${target_slug}"

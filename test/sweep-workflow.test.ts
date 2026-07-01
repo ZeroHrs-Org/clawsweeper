@@ -37,7 +37,7 @@ test("review workflow gives Codex a read-only inspection token", () => {
   assert.match(workflow, /CLAWSWEEPER_PROOF_INSPECTION_TOKEN/);
   assert.match(
     exactReviewStep,
-    /CLAWSWEEPER_PROOF_INSPECTION_TOKEN: \$\{\{ steps\.target-read-token\.outputs\.token \|\| github\.token \}\}/,
+    /CLAWSWEEPER_PROOF_INSPECTION_TOKEN: \$\{\{ steps\.target-read-token\.outputs\.token \|\| env\.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN \|\| github\.token \}\}/,
   );
   assert.match(reviewJob, /uses: \.\/clawsweeper\/\.github\/actions\/setup-codex/);
   assert.doesNotMatch(reviewJob, /uses: \.\/\.github\/actions\/setup-codex/);
@@ -73,7 +73,37 @@ test("publish workflow installs Codex from the root checkout path", () => {
   assert.ok(applySelectedStart > setupCodexStart);
   assert.match(
     publishJob.slice(setupCodexStart, applySelectedStart),
-    /if: \$\{\{ success\(\) && steps\.target-write-token\.outputs\.token != '' && github\.event\.inputs\.apply_after_review == 'true' \}\}/,
+    /if: \$\{\{ success\(\) && \(steps\.target-write-token\.outputs\.token != '' \|\| env\.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != ''\) && github\.event\.inputs\.apply_after_review == 'true' \}\}/,
+  );
+});
+
+test("ZeroHrs exact feedback dispatch runs Android proof and syncs a review comment", () => {
+  const workflow = readFileSync(".github/workflows/sweep.yml", "utf8");
+  const reviewJobStart = workflow.indexOf("\n  review:");
+  const publishJobStart = workflow.indexOf("\n  publish:", reviewJobStart);
+  const reviewJob = workflow.slice(reviewJobStart, publishJobStart);
+  const publishJob = workflow.slice(
+    publishJobStart,
+    workflow.indexOf("\n  recover-review-failures:", publishJobStart),
+  );
+
+  assert.match(
+    workflow,
+    /CLAWSWEEPER_COMMENT_AUTHOR_LOGIN: \$\{\{ vars\.CLAWSWEEPER_COMMENT_AUTHOR_LOGIN \|\| 'zebriot' \}\}/,
+  );
+  assert.match(reviewJob, /- name: Run ZeroHrs Android feedback proof/);
+  assert.match(reviewJob, /needs\.plan\.outputs\.target_repo == 'ZeroHrs-Org\/zerohrs-app'/);
+  assert.match(reviewJob, /needs\.plan\.outputs\.target_repo == 'zerohrs-org\/zerohrs-app'/);
+  assert.match(reviewJob, /ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY/);
+  assert.match(
+    reviewJob,
+    /crabbox run[\s\S]*--provider ssh[\s\S]*--static-host "\$HETZNER_IPV4"[\s\S]*bash scripts\/crabbox\/android-proof\.sh/,
+  );
+  assert.match(reviewJob, /ZEROHRS_ANDROID_PROOF_PROMPT/);
+  assert.match(reviewJob, /name: zerohrs-android-proof-\$\{\{ matrix\.shard \}\}/);
+  assert.match(
+    publishJob,
+    /github\.event\.action != 'clawsweeper_target_sweep' \|\| github\.event\.client_payload\.item_number != ''/,
   );
 });
 
@@ -95,7 +125,10 @@ test("apply workflow installs Codex only when proof-eligible apply work can run"
   assert.ok(setupCodexStart > preselectStart);
   assert.ok(applyStart > setupCodexStart);
   const reconcileBlock = applyJob.slice(reconcileStart, preselectStart);
-  assert.match(reconcileBlock, /GH_TOKEN: \$\{\{ steps\.target-write-token\.outputs\.token \}\}/);
+  assert.match(
+    reconcileBlock,
+    /GH_TOKEN: \$\{\{ steps\.target-write-token\.outputs\.token \|\| env\.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN \|\| github\.token \}\}/,
+  );
   assert.match(reconcileBlock, /pnpm run reconcile -- "\$\{reconcile_args\[@\]\}"/);
   assert.match(
     applyJob.slice(setupCodexStart, applyStart),
@@ -207,25 +240,25 @@ test("sweep target tokens fall back when an org app installation is missing", ()
   }
   assert.match(
     workflow,
-    /GH_TOKEN: \$\{\{ steps\.target-read-token\.outputs\.token \|\| github\.token \}\}/,
+    /GH_TOKEN: \$\{\{ steps\.target-read-token\.outputs\.token \|\| env\.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN \|\| github\.token \}\}/,
   );
   assert.match(
     workflow,
-    /CLAWSWEEPER_PROOF_INSPECTION_TOKEN: \$\{\{ steps\.codex-inspection-token\.outputs\.token \|\| github\.token \}\}/,
+    /CLAWSWEEPER_PROOF_INSPECTION_TOKEN: \$\{\{ steps\.codex-inspection-token\.outputs\.token \|\| env\.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN \|\| github\.token \}\}/,
   );
   assert.ok(
     workflow.includes(
-      "if: ${{ success() && steps.target-write-token.outputs.token != '' && needs.plan.outputs.hot_intake != 'true'",
+      "if: ${{ success() && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && needs.plan.outputs.hot_intake != 'true'",
     ),
   );
   assert.ok(
     workflow.includes(
-      "if: ${{ success() && steps.target-write-token.outputs.token != '' && ((github.event_name == 'repository_dispatch'",
+      "if: ${{ success() && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && ((github.event_name == 'repository_dispatch'",
     ),
   );
   assert.ok(
     workflow.includes(
-      "if: ${{ success() && steps.target-write-token.outputs.token != '' && github.event.inputs.apply_after_review == 'true' }}",
+      "if: ${{ success() && (steps.target-write-token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') && github.event.inputs.apply_after_review == 'true' }}",
     ),
   );
   assert.doesNotMatch(workflow, new RegExp("OPENCLAW_" + "GH_TOKEN"));
@@ -655,7 +688,8 @@ test("setup-state defaults to an auth-safe shallow checkout", () => {
   assert.match(action, /sparse-checkout: \$\{\{ inputs\.sparse-checkout \}\}/);
   assert.doesNotMatch(action, /state-repository:/);
   assert.doesNotMatch(action, /state-ref:/);
-  assert.match(action, /repository: openclaw\/clawsweeper-state/);
+  assert.match(action, /default: ZeroHrs-Org\/clawsweeper-state-private/);
+  assert.match(action, /repository: \$\{\{ inputs\.repository \}\}/);
   assert.match(action, /ref: state/);
 });
 

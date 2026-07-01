@@ -28,6 +28,17 @@ test("repositoryProfileFor supports fs-safe event reviews", () => {
   ]);
 });
 
+test("ZeroHrs feedback profile treats maintainer-authored reports as external feedback", () => {
+  const profile = repositoryProfileFor("ZeroHrs-Org/zerohrs-app");
+
+  assert.equal(profile.targetRepo, "zerohrs-org/zerohrs-app");
+  assert.match(profile.promptNote, /labels\/body\/admin metadata indicate a feedback report/);
+  assert.match(profile.promptNote, /external user report/);
+  assert.match(profile.promptNote, /GitHub issue author is a ZeroHrs maintainer/);
+  assert.match(profile.promptNote, /prefer Android Crabbox proof/);
+  assert.deepEqual(profile.applyCloseRules.issue, ["implemented_on_main"]);
+});
+
 test("generic OpenClaw fallback supports conservative event-only onboarding", () => {
   const profile = repositoryProfileFor("OpenClaw/example-tool");
 
