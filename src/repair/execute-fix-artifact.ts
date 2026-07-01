@@ -145,9 +145,17 @@ const ZEROHRS_REPO = "ZeroHrs-Org/zerohrs-app";
 const EXECUTOR_ANDROID_PROOF_SOURCE_DIR = path.join("reports", "clawsweeper", "android-proof");
 const LEGACY_ANDROID_PROOF_SOURCE_DIR = path.join("reports", "crabbox-android");
 const EXECUTOR_ANDROID_PROOF_RUN_DIR = path.join("zerohrs-android-proof", "executor");
+const ZEROHRS_ANDROID_PROOF_HARNESS_FILES = [
+  "docs/crabbox-hetzner-feedback.md",
+  "scripts/crabbox/android-proof.sh",
+  "scripts/crabbox/android-proof.test.sh",
+  "scripts/crabbox/run-android-proof.sh",
+  "scripts/crabbox/run-android-proof.test.sh",
+];
 const PROOF_ARTIFACT_GIT_EXCLUDE_PATHS = [
   `:(exclude)${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/**`,
   `:(exclude)${LEGACY_ANDROID_PROOF_SOURCE_DIR}/**`,
+  ...ZEROHRS_ANDROID_PROOF_HARNESS_FILES.map((file) => `:(exclude)${file}`),
 ];
 
 const args = parseArgs(process.argv.slice(2));
@@ -3393,6 +3401,7 @@ function checkoutRecoverableReplacementBranch({
 }
 
 function commitCheckpointIfNeeded({ targetDir, message, trailers = [] }: LooseRecord) {
+  restoreZeroHrsIssueProofHarness({ targetDir });
   if (!committableGitStatus({ targetDir }).trim()) return "";
   run("git", ["add", "--all", "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS], {
     cwd: targetDir,
@@ -3408,6 +3417,59 @@ function committableGitStatus({ targetDir }: { targetDir: string }) {
   return run("git", ["status", "--porcelain", "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS], {
     cwd: targetDir,
   });
+}
+
+function restoreZeroHrsIssueProofHarness({ targetDir }: { targetDir: string }) {
+  if (!isZeroHrsIssueImplementation()) return [];
+  const restoreSource = zeroHrsProofHarnessRestoreSource(targetDir);
+  const tracked = run("git", ["ls-files", "--", ...ZEROHRS_ANDROID_PROOF_HARNESS_FILES], {
+    cwd: targetDir,
+  })
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (tracked.length === 0) return [];
+  const changed = run("git", ["status", "--porcelain", "--", ...tracked], {
+    cwd: targetDir,
+  })
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.slice(3).trim())
+    .filter(Boolean);
+  const baseDiff = run("git", ["diff", "--name-only", restoreSource, "--", ...tracked], {
+    cwd: targetDir,
+  })
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const restoreFiles = uniqueStrings([...changed, ...baseDiff]);
+  if (restoreFiles.length === 0) return [];
+  run("git", ["restore", "--source", restoreSource, "--", ...tracked], { cwd: targetDir });
+  logProgress("restored ZeroHrs proof harness files before checkpoint", {
+    source: restoreSource,
+    files: restoreFiles,
+  });
+  return restoreFiles;
+}
+
+function isZeroHrsIssueImplementation() {
+  return (
+    String(result.repo ?? "").toLowerCase() === ZEROHRS_REPO.toLowerCase() &&
+    job.frontmatter.source === "issue_implementation"
+  );
+}
+
+function zeroHrsProofHarnessRestoreSource(targetDir: string) {
+  const baseBranch = String(process.env.CLAWSWEEPER_FIX_BASE_BRANCH ?? DEFAULT_BASE_BRANCH);
+  const candidate = `origin/${baseBranch}`;
+  const check = spawnSync("git", ["rev-parse", "--verify", `${candidate}^{commit}`], {
+    cwd: targetDir,
+    env: process.env,
+    encoding: "utf8",
+    timeout: currentNetworkCommandTimeoutMs(),
+  });
+  return check.status === 0 ? candidate : "HEAD";
 }
 
 function pushRecoverableBranch({ targetDir, branch }: LooseRecord) {

@@ -112,6 +112,10 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /ZeroHrs mobile feedback proof/);
   assert.match(prompt, /executor agent owns issue-specific Android verification/);
   assert.match(prompt, /do not hardcode one issue's navigation/);
+  assert.match(prompt, /proof harness files are protected infrastructure/);
+  assert.match(prompt, /inside the target checkout before returning/);
+  assert.match(prompt, /\.crabbox\/runs\/\.\.\.-artifacts\.tgz/);
+  assert.match(prompt, /do not leave the only proof copy under `\/tmp`/);
   assert.match(prompt, /reports\/clawsweeper\/android-proof/);
   assert.match(prompt, /before-loading\.png/);
   assert.match(prompt, /before\.mp4/);

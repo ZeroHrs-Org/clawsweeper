@@ -29,7 +29,9 @@ Optional ClawSweeper repository secret:
 
 ZeroHrs mobile feedback review can use the target repo's legacy `android-proof` Crabbox job on the static Hetzner SSH host to capture current-state reproduction evidence before planning. This review evidence is not after-fix proof.
 
-Implementation proof is owned by the executor coding agent. The agent should decide the issue-specific Android reproduction path, seed or mock any needed local dev/test data, capture current-main `before-*` media and fixed-branch `after-*` media, then save the result under `reports/clawsweeper/android-proof`. ClawSweeper only collects and publishes that executor-owned directory.
+Implementation proof is owned by the executor coding agent. The agent should decide the issue-specific Android reproduction path, seed or mock any needed local dev/test data, capture current-main `before-*` media and fixed-branch `after-*` media, then save the result under `reports/clawsweeper/android-proof` inside the target checkout. ClawSweeper only collects and publishes that executor-owned checkout directory, so proof left only under `/tmp` or `.crabbox/runs` is not publishable.
+
+Issue implementation PRs must not carry one-off edits to the reusable proof harness. Keep `scripts/crabbox/android-proof.sh`, `scripts/crabbox/run-android-proof.sh`, their tests, and `docs/crabbox-hetzner-feedback.md` generic; issue-specific proof decisions belong in the executor's commands, logs, manifest, and saved media.
 
 Android proof should read test-account credentials from repository secrets such as `ZEROHRS_TEST_EMAIL` and `ZEROHRS_TEST_PASSWORD`; do not hardcode them in prompts, docs, or scripts.
 

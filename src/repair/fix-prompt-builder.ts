@@ -93,8 +93,10 @@ function renderTargetSpecificRepairGuidance(fixArtifact: LooseRecord) {
   if (repo !== "zerohrs-org/zerohrs-app") return "";
   return [
     "- ZeroHrs mobile feedback proof: the executor agent owns issue-specific Android verification when the issue touches mobile UI/runtime behavior;",
-    "- do not hardcode one issue's navigation, text labels, or reproduction path into shared proof scripts such as `scripts/crabbox/android-proof.sh`; choose the reproduction path for this issue during execution and keep reusable scripts generic;",
-    "- capture and save proof media under `reports/clawsweeper/android-proof` before returning; ClawSweeper only collects and publishes that directory after you return;",
+    "- do not hardcode one issue's navigation, text labels, or reproduction path into shared proof scripts such as `scripts/crabbox/android-proof.sh` or `scripts/crabbox/run-android-proof.sh`; choose the reproduction path for this issue during execution and keep reusable scripts generic;",
+    "- proof harness files are protected infrastructure for feedback issue PRs; do not leave edits to `scripts/crabbox/android-proof.sh`, `scripts/crabbox/run-android-proof.sh`, their tests, or `docs/crabbox-hetzner-feedback.md` as part of the target diff;",
+    "- capture and save proof media under `reports/clawsweeper/android-proof` inside the target checkout before returning; ClawSweeper only collects and publishes that checkout directory after you return;",
+    "- if Crabbox returns `.crabbox/runs/...-artifacts.tgz`, extract or copy the `reports/clawsweeper/android-proof` files back into the target checkout and verify them with `find reports/clawsweeper/android-proof -maxdepth 1 -type f`; do not leave the only proof copy under `/tmp`, `.crabbox`, or another external path;",
     "- required executor proof files: `proof-manifest.json`, `command.log`, `emulator.log`, `app.log`, `before-loading.png`, `before.mp4`, `after-loading.png`, and `after.mp4`; include `before.png` and `after.png` when practical;",
     "- `before-*` media must show the current-main reproduction before the fix; `after-*` media must show the same issue path on this fixed branch after the fix; launcher or generic start-page screenshots alone are invalid;",
     "- the proof manifest should state the issue-specific reproduction route, refs/SHAs or branch names used for before and after, seed/mock commands, and any blocker; set `status` to `completed` only when both before and after media are valid;",

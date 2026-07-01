@@ -43,8 +43,11 @@ test("ZeroHrs feedback profile treats maintainer-authored reports as external fe
     /During planning\/review, collect current-state reproduction artifacts only/,
   );
   assert.match(profile.promptNote, /executor agent decides the issue-specific reproduction path/);
+  assert.match(profile.promptNote, /inside the target checkout/);
+  assert.match(profile.promptNote, /external \/tmp-only proof is not publishable/);
   assert.match(profile.promptNote, /reports\/clawsweeper\/android-proof/);
   assert.match(profile.promptNote, /Do not hardcode one issue's path into shared proof scripts/);
+  assert.match(profile.promptNote, /do not leave edits to scripts\/crabbox\/android-proof\.sh/);
   assert.match(profile.promptNote, /before-loading\.png/);
   assert.match(profile.promptNote, /before\.mp4/);
   assert.match(profile.promptNote, /seed or mock data in the local dev\/test database/);

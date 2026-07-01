@@ -197,3 +197,41 @@ test("repair executor can skip internal Codex review after validation", () => {
   );
   assert.match(source, /codexReviewSkipped \? "skipped"/);
 });
+
+test("ZeroHrs issue implementation restores protected Android proof harness before commits", () => {
+  const source = fs.readFileSync(
+    path.join(process.cwd(), "src/repair/execute-fix-artifact.ts"),
+    "utf8",
+  );
+  const checkpointStart = source.indexOf("function commitCheckpointIfNeeded(");
+  const checkpointEnd = source.indexOf("function committableGitStatus(", checkpointStart);
+  const restoreStart = source.indexOf("function restoreZeroHrsIssueProofHarness(");
+  const restoreEnd = source.indexOf("function isZeroHrsIssueImplementation(", restoreStart);
+  const sourceStart = source.indexOf("function zeroHrsProofHarnessRestoreSource(");
+
+  assert.notEqual(checkpointStart, -1);
+  assert.notEqual(checkpointEnd, -1);
+  assert.notEqual(restoreStart, -1);
+  assert.notEqual(restoreEnd, -1);
+  assert.notEqual(sourceStart, -1);
+
+  const checkpoint = source.slice(checkpointStart, checkpointEnd);
+  const restore = source.slice(restoreStart, restoreEnd);
+  const sourceHelper = source.slice(sourceStart, source.indexOf("function pushRecoverableBranch("));
+  assert.match(source, /ZEROHRS_ANDROID_PROOF_HARNESS_FILES = \[/);
+  assert.match(source, /scripts\/crabbox\/android-proof\.sh/);
+  assert.match(source, /scripts\/crabbox\/run-android-proof\.sh/);
+  assert.match(source, /docs\/crabbox-hetzner-feedback\.md/);
+  assert.ok(
+    checkpoint.indexOf("restoreZeroHrsIssueProofHarness({ targetDir });") <
+      checkpoint.indexOf('run("git", ["add"'),
+    "protected proof harness files must be restored before staging",
+  );
+  assert.match(restore, /isZeroHrsIssueImplementation\(\)/);
+  assert.match(restore, /zeroHrsProofHarnessRestoreSource\(targetDir\)/);
+  assert.match(restore, /git", \["diff", "--name-only", restoreSource/);
+  assert.match(restore, /git", \["restore", "--source", restoreSource/);
+  assert.match(restore, /restored ZeroHrs proof harness files before checkpoint/);
+  assert.match(sourceHelper, /origin\/\$\{baseBranch\}/);
+  assert.match(sourceHelper, /return check\.status === 0 \? candidate : "HEAD"/);
+});
