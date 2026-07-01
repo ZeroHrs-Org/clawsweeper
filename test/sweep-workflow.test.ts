@@ -405,7 +405,10 @@ test("comment commands keep the router-to-sweep dispatch contract", () => {
     /status_comment_id="\$\{\{ github\.event\.client_payload\.status_comment_id \|\| '' \}\}"/,
   );
   assert.match(routerWorkflow, /--status-comment-id "\$status_comment_id"/);
-  assert.match(routerSource, /event_type:\s*"clawsweeper_item"/);
+  assert.match(routerSource, /event_type:\s*"clawsweeper_target_sweep"/);
+  assert.match(routerSource, /source_event:\s*"issue_comment"/);
+  assert.match(routerSource, /hot_intake:\s*"true"/);
+  assert.match(routerSource, /apply_after_review:\s*"true"/);
   assert.match(routerSource, /adaptiveReviewBudgetForPullRequest\(command\.target\)/);
   assert.match(routerSource, /const MAX_MEDIA_PREPROCESSING_TIMEOUT_MS = 480_000/);
   assert.match(routerSource, /media_proof_timeout_ms: reviewBudget\.mediaProofTimeoutMs/);
