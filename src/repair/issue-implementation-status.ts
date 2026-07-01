@@ -198,9 +198,10 @@ export function renderIssueImplementationStatusComment(
 async function postDashboardStatus(options: StatusOptions) {
   const token = String(process.env.CLAWSWEEPER_STATUS_INGEST_TOKEN ?? "").trim();
   if (!token) return "skipped";
+  const statusUrl = String(process.env.CLAWSWEEPER_STATUS_URL ?? "").trim();
   const url =
     String(process.env.CLAWSWEEPER_STATUS_INGEST_URL ?? "").trim() ||
-    "https://clawsweeper.openclaw.ai/api/events";
+    `${trimTrailingSlash(statusUrl || "https://clawsweeper.openclaw.ai")}/api/events`;
   const state = options.state.trim().toLowerCase();
   const response = await fetch(url, {
     method: "POST",
@@ -231,6 +232,10 @@ async function postDashboardStatus(options: StatusOptions) {
     throw new Error(`dashboard ingest returned ${response.status}: ${await response.text()}`);
   }
   return "sent";
+}
+
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, "");
 }
 
 function eventTypeForState(state: string) {

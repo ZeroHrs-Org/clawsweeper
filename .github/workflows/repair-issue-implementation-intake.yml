@@ -71,6 +71,8 @@ env:
   CLAWSWEEPER_CODEX_REASONING_EFFORT: ${{ vars.CLAWSWEEPER_CODEX_REASONING_EFFORT || 'high' }}
   CLAWSWEEPER_GIT_USER_NAME: ${{ vars.CLAWSWEEPER_GIT_USER_NAME || 'clawsweeper[bot]' }}
   CLAWSWEEPER_GIT_USER_EMAIL: ${{ vars.CLAWSWEEPER_GIT_USER_EMAIL || '274271284+clawsweeper[bot]@users.noreply.github.com' }}
+  CLAWSWEEPER_STATUS_URL: ${{ vars.CLAWSWEEPER_STATUS_URL || vars.ZEROHRS_CLAWSWEEPER_STATUS_URL || (github.repository_owner == 'ZeroHrs-Org' && 'https://clawsweeper.zerohrs.com' || 'https://clawsweeper.openclaw.ai') }}
+  CLAWSWEEPER_STATUS_INGEST_URL: ${{ vars.CLAWSWEEPER_STATUS_INGEST_URL || (github.repository_owner == 'ZeroHrs-Org' && 'https://clawsweeper.zerohrs.com/api/events' || 'https://clawsweeper.openclaw.ai/api/events') }}
 
 concurrency:
   group: issue-implementation-${{ github.event.inputs.target_repo || github.event.client_payload.target_repo || 'openclaw/openclaw' }}-${{ github.event.inputs.item_number || github.event.client_payload.item_number || github.run_id }}

@@ -2,6 +2,15 @@ name: ClawSweeper Live Dashboard
 
 on:
   workflow_dispatch:
+    inputs:
+      deployment:
+        description: "Dashboard deployment target"
+        required: true
+        default: zerohrs
+        type: choice
+        options:
+          - zerohrs
+          - openclaw
   push:
     branches: [main]
     paths:
@@ -17,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: clawsweeper-live-dashboard
+  group: clawsweeper-live-dashboard-${{ inputs.deployment || (github.repository_owner == 'ZeroHrs-Org' && 'zerohrs' || 'openclaw') }}
   cancel-in-progress: true
 
 jobs:
@@ -25,11 +34,12 @@ jobs:
     name: Deploy dashboard Worker
     runs-on: ubuntu-latest
     env:
-      CLOUDFLARE_ACCOUNT_ID: 91b59577e757131d68d55a471fe32aca
-      CLOUDFLARE_WORKER_NAME: clawsweeper-status
-      CLOUDFLARE_API_TOKEN: ${{ secrets.OPENCLAW_CLOUDFLARE_WORKERS_API_TOKEN || secrets.OPENCLAW_CLOUDFLARE_API_TOKEN }}
-      CF_API_TOKEN: ${{ secrets.OPENCLAW_CLOUDFLARE_WORKERS_API_TOKEN || secrets.OPENCLAW_CLOUDFLARE_API_TOKEN }}
-      CLAWSWEEPER_STATUS_URL: https://clawsweeper.openclaw.ai
+      DASHBOARD_DEPLOYMENT: ${{ inputs.deployment || (github.repository_owner == 'ZeroHrs-Org' && 'zerohrs' || 'openclaw') }}
+      OPENCLAW_CLOUDFLARE_ACCOUNT_ID: 91b59577e757131d68d55a471fe32aca
+      OPENCLAW_CLOUDFLARE_WORKERS_API_TOKEN: ${{ secrets.OPENCLAW_CLOUDFLARE_WORKERS_API_TOKEN || secrets.OPENCLAW_CLOUDFLARE_API_TOKEN }}
+      ZEROHRS_CLOUDFLARE_ACCOUNT_ID: ${{ vars.ZEROHRS_CLOUDFLARE_ACCOUNT_ID || secrets.ZEROHRS_CLOUDFLARE_ACCOUNT_ID }}
+      ZEROHRS_CLOUDFLARE_WORKERS_API_TOKEN: ${{ secrets.ZEROHRS_CLOUDFLARE_WORKERS_API_TOKEN }}
+      ZEROHRS_CLAWSWEEPER_STATUS_URL: ${{ vars.ZEROHRS_CLAWSWEEPER_STATUS_URL || 'https://clawsweeper.zerohrs.com' }}
       CLAWSWEEPER_STATUS_INGEST_TOKEN: ${{ secrets.CLAWSWEEPER_STATUS_INGEST_TOKEN }}
       CLAWSWEEPER_APP_PRIVATE_KEY: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
       CLAWSWEEPER_WEBHOOK_SECRET: ${{ secrets.CLAWSWEEPER_WEBHOOK_SECRET }}
@@ -38,6 +48,45 @@ jobs:
 
       - uses: ./.github/actions/setup-pnpm
 
+      - name: Resolve deploy config
+        id: deploy-config
+        run: |
+          set -euo pipefail
+          case "$DASHBOARD_DEPLOYMENT" in
+            zerohrs)
+              config="dashboard/wrangler.zerohrs.toml"
+              account_id="${ZEROHRS_CLOUDFLARE_ACCOUNT_ID:-}"
+              api_token="${ZEROHRS_CLOUDFLARE_WORKERS_API_TOKEN:-}"
+              worker_name="zerohrs-clawsweeper-status"
+              status_url="${ZEROHRS_CLAWSWEEPER_STATUS_URL:-https://clawsweeper.zerohrs.com}"
+              ;;
+            openclaw)
+              config="dashboard/wrangler.toml"
+              account_id="${OPENCLAW_CLOUDFLARE_ACCOUNT_ID:-}"
+              api_token="${OPENCLAW_CLOUDFLARE_WORKERS_API_TOKEN:-}"
+              worker_name="clawsweeper-status"
+              status_url="https://clawsweeper.openclaw.ai"
+              ;;
+            *)
+              echo "Unknown dashboard deployment: $DASHBOARD_DEPLOYMENT" >&2
+              exit 1
+              ;;
+          esac
+          test -f "$config"
+          {
+            echo "DASHBOARD_WRANGLER_CONFIG=$config"
+            echo "CLOUDFLARE_ACCOUNT_ID=$account_id"
+            echo "CLOUDFLARE_API_TOKEN=$api_token"
+            echo "CF_API_TOKEN=$api_token"
+            echo "CLOUDFLARE_WORKER_NAME=$worker_name"
+            echo "CLAWSWEEPER_STATUS_URL=$status_url"
+          } >> "$GITHUB_ENV"
+          {
+            echo "config=$config"
+            echo "worker_name=$worker_name"
+            echo "status_url=$status_url"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Verify Cloudflare token is configured
         run: test -n "$CLOUDFLARE_API_TOKEN"
 
@@ -45,7 +94,7 @@ jobs:
         id: dashboard-config
         run: |
           test -n "$CLAWSWEEPER_STATUS_INGEST_TOKEN"
-          cp dashboard/wrangler.toml dashboard/wrangler.deploy.toml
+          cp "$DASHBOARD_WRANGLER_CONFIG" dashboard/wrangler.deploy.toml
           printf 'INGEST_TOKEN = "%s"\n' "$CLAWSWEEPER_STATUS_INGEST_TOKEN" >> dashboard/wrangler.deploy.toml
           echo "config=dashboard/wrangler.deploy.toml" >> "$GITHUB_OUTPUT"
 

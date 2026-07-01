@@ -25,8 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
-      CLAWSWEEPER_STATUS_URL: https://clawsweeper.openclaw.ai
-      CLAWSWEEPER_STATUS_INGEST_URL: https://clawsweeper.openclaw.ai/api/events
+      CLAWSWEEPER_STATUS_URL: ${{ vars.CLAWSWEEPER_STATUS_URL || vars.ZEROHRS_CLAWSWEEPER_STATUS_URL || (github.repository_owner == 'ZeroHrs-Org' && 'https://clawsweeper.zerohrs.com' || 'https://clawsweeper.openclaw.ai') }}
+      CLAWSWEEPER_STATUS_INGEST_URL: ${{ vars.CLAWSWEEPER_STATUS_INGEST_URL || (github.repository_owner == 'ZeroHrs-Org' && 'https://clawsweeper.zerohrs.com/api/events' || 'https://clawsweeper.openclaw.ai/api/events') }}
       CLAWSWEEPER_STATUS_INGEST_TOKEN: ${{ secrets.CLAWSWEEPER_STATUS_INGEST_TOKEN }}
       CLAWSWEEPER_STATUS_CI_LIMIT: "30"
       GITHUB_TOKEN: ${{ github.token }}

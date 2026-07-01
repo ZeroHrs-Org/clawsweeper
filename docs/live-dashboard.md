@@ -16,6 +16,62 @@ rows, see
 
 ## Deployment
 
+### ZeroHrs
+
+Cloudflare account:
+
+- account: `ZeroHrs`
+- zone: `zerohrs.com`
+
+Worker:
+
+- name: `zerohrs-clawsweeper-status`
+- deployment: `https://clawsweeper.zerohrs.com/`
+- machine ingest: `https://clawsweeper.zerohrs.com/api/events`
+
+GitHub deploys use `.github/workflows/dashboard.yml` with deployment target
+`zerohrs`. Configure these values in `ZeroHrs-Org/clawsweeper`:
+
+- `ZEROHRS_CLOUDFLARE_ACCOUNT_ID` as a repo variable or secret
+- `ZEROHRS_CLOUDFLARE_WORKERS_API_TOKEN` as a repo secret
+- `ZEROHRS_CLAWSWEEPER_STATUS_URL=https://clawsweeper.zerohrs.com` as a repo
+  variable when overriding the default
+- `CLAWSWEEPER_STATUS_INGEST_TOKEN` as a repo secret
+- `CLAWSWEEPER_APP_PRIVATE_KEY` as a repo secret
+- `CLAWSWEEPER_WEBHOOK_SECRET` as a repo secret
+
+Deploy manually:
+
+```bash
+gh workflow run dashboard.yml \
+  --repo ZeroHrs-Org/clawsweeper \
+  --ref main \
+  -f deployment=zerohrs
+```
+
+Smoke checks after deployment:
+
+```bash
+curl -fsS https://clawsweeper.zerohrs.com/ >/dev/null
+curl -fsS "https://clawsweeper.zerohrs.com/api/status?fresh=1" | jq '.clawsweeper_repo, .target_repositories'
+curl -i -X POST https://clawsweeper.zerohrs.com/api/events \
+  -H "Content-Type: application/json" \
+  --data '{"event_type":"status.test","mode":"smoke","stage":"auth","status":"missing-token"}'
+curl -fsS -X POST https://clawsweeper.zerohrs.com/api/events \
+  -H "Authorization: Bearer $CLAWSWEEPER_STATUS_INGEST_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"event_type":"status.test","mode":"smoke","stage":"auth","status":"ok","repository":"ZeroHrs-Org/zerohrs-app"}'
+```
+
+If the dashboard shows stale or missing rows, check the workflow event env first:
+`CLAWSWEEPER_STATUS_URL` should resolve to `https://clawsweeper.zerohrs.com`
+and `CLAWSWEEPER_STATUS_INGEST_URL` should resolve to
+`https://clawsweeper.zerohrs.com/api/events`. For Cloudflare failures, verify
+the custom domain route, DNS record, Worker script name, and Workers API token
+scope before changing the Worker.
+
+### OpenClaw
+
 Cloudflare account:
 
 - account: `Services@openclaw.org`

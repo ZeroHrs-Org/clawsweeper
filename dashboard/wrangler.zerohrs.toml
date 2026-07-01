@@ -1,0 +1,44 @@
+name = "zerohrs-clawsweeper-status"
+main = "worker.ts"
+compatibility_date = "2026-05-11"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "STATUS_STORE"
+class_name = "StatusStore"
+
+[[durable_objects.bindings]]
+name = "EXACT_REVIEW_QUEUE"
+class_name = "ExactReviewQueue"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["StatusStore"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["ExactReviewQueue"]
+
+[[routes]]
+pattern = "clawsweeper.zerohrs.com"
+custom_domain = true
+
+[vars]
+CLAWSWEEPER_REPO = "ZeroHrs-Org/clawsweeper"
+CLAWSWEEPER_APP_CLIENT_ID = "Iv23lio8I2FpfNvoKSKg"
+CLAWSWEEPER_CRABFLEET_URL = ""
+TARGET_REPOS = "ZeroHrs-Org/zerohrs-app"
+WORKER_BUDGET = "32"
+WORKER_DETAIL_RUN_LIMIT = "128"
+WORKER_JOB_FETCH_CONCURRENCY = "12"
+WORKER_JOB_CACHE_TTL_SECONDS = "60"
+WORKER_HEALTH_CACHE_TTL_SECONDS = "120"
+WORKER_HEALTH_FETCH_CONCURRENCY = "10"
+AUTOMERGE_CACHE_TTL_SECONDS = "300"
+RECENT_CLOSED_CACHE_TTL_SECONDS = "300"
+CACHE_TTL_SECONDS = "20"
+INCLUDE_CI_STATUS = "1"
+EXACT_REVIEW_QUEUE_MAX_CONCURRENT = "20"
+EXACT_REVIEW_TARGET_MAX_CONCURRENT = "16"
+EXACT_REVIEW_DISPATCH_LEASE_MS = "600000"
+EXACT_REVIEW_EXECUTION_LEASE_MS = "7800000"

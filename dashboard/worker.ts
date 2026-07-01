@@ -82,7 +82,6 @@ const EXACT_REVIEW_QUEUE_NAME = "global";
 const CLAWSWEEPER_REVIEW_REPO = "openclaw/clawsweeper";
 const CLAWSWEEPER_STATE_REPO = "openclaw/clawsweeper-state";
 const CLAWSWEEPER_STATE_REF = "state";
-const DEFAULT_CRABFLEET_URL = "https://crabfleet.openclaw.ai";
 const CLUSTER_REPAIR_INTAKE_WORKFLOW = "repair-cluster-intake.yml";
 const CLAWSWEEPER_ALLOWED_ASSOCIATIONS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 const CLAWSWEEPER_ISSUE_ITEM_ACTIONS = new Set(["opened", "reopened", "edited"]);
@@ -4703,12 +4702,14 @@ function escapeHtml(value) {
   );
 }
 
-function externalHttpUrl(value, fallback) {
+function optionalExternalHttpUrl(value) {
   try {
-    const url = new URL(String(value ?? "").trim() || fallback);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : fallback;
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const url = new URL(raw);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : "";
   } catch {
-    return fallback;
+    return "";
   }
 }
 
@@ -5478,7 +5479,10 @@ setInterval(load, 120000);
 }
 
 function dashboardHtml(env: DashboardEnv = {}) {
-  const crabfleetUrl = externalHttpUrl(env.CLAWSWEEPER_CRABFLEET_URL, DEFAULT_CRABFLEET_URL);
+  const crabfleetUrl = optionalExternalHttpUrl(env.CLAWSWEEPER_CRABFLEET_URL);
+  const crabfleetLink = crabfleetUrl
+    ? `<a class="pill" href="${escapeHtml(crabfleetUrl)}">Live terminals</a>`
+    : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -6207,7 +6211,7 @@ a:hover { color: #89c8ff; text-decoration: underline; }
     <div class="top-links">
       <a class="pill" href="/triage">Issue triage</a>
       <a class="pill" href="/pr-proof-triage">PR proof triage</a>
-      <a class="pill" href="${escapeHtml(crabfleetUrl)}">Live terminals</a>
+      ${crabfleetLink}
       <span class="muted mono" id="updated"></span>
     </div>
   </header>

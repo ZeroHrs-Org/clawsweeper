@@ -762,6 +762,16 @@ test("dashboard HTML preserves UTF-8 emoji labels", async () => {
   assert.doesNotMatch(html, /ðŸ|â|âš|âœ/);
 });
 
+test("dashboard HTML hides live terminal links when CrabFleet is not configured", async () => {
+  const response = await worker.fetch(new Request("https://clawsweeper.zerohrs.com/"), {
+    CLAWSWEEPER_CRABFLEET_URL: "",
+  });
+  const html = await response.text();
+
+  assert.doesNotMatch(html, /Live terminals/);
+  assert.doesNotMatch(html, /crabfleet\.openclaw\.ai/);
+});
+
 test("dashboard groups automatic issue lifecycle events with active workers", () => {
   const rows = automaticIssueWork(
     [
