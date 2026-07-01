@@ -136,6 +136,10 @@ test("ZeroHrs Android proof workflow runs before issue implementation post-fligh
     workflow,
     /pnpm run repair:zerohrs-android-proof -- "\$\{\{ inputs\.job \}\}" --latest/,
   );
+  assert.match(
+    workflow,
+    /ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE: \$\{\{ secrets\.ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE \}\}/,
+  );
   assert.match(workflow, /path: \.clawsweeper-repair\/runs\/\*\*\/zerohrs-android-proof\/\*\*/);
 });
 
@@ -184,7 +188,7 @@ test("ZeroHrs Android proof publisher extracts Crabbox collected artifacts", () 
   assert.match(source, /"reports\/crabbox-android"/);
 });
 
-test("ZeroHrs Android proof comments use private-repo-safe file links", () => {
+test("ZeroHrs Android proof comments prefer GitHub attachments with private-repo-safe fallbacks", () => {
   const source = fs.readFileSync("src/repair/zerohrs-android-proof-media.ts", "utf8");
   const urlsStart = source.indexOf("function buildProofAssetUrls(");
   const urlsEnd = source.indexOf("function publishProofComment(", urlsStart);
@@ -196,8 +200,15 @@ test("ZeroHrs Android proof comments use private-repo-safe file links", () => {
 
   assert.match(helper, /github\.com\/\$\{ZEROHRS_REPO\}\/blob/);
   assert.doesNotMatch(helper, /raw\.githubusercontent\.com/);
-  assert.doesNotMatch(helper, /!\[Before loading\]/);
-  assert.match(helper, /Before loading screenshot:/);
+  assert.match(source, /GITHUB_ATTACHMENT_IMAGE_LIMIT_BYTES = 10_000_000/);
+  assert.match(source, /GITHUB_ATTACHMENT_VIDEO_LIMIT_BYTES = 100_000_000/);
+  assert.match(helper, /ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE/);
+  assert.match(helper, /upload\/policies\/assets/);
+  assert.match(helper, /file exceeds GitHub comment attachment limit/);
+  assert.match(helper, /Fallback file link:/);
+  assert.match(helper, /renderGitHubAttachmentMarkdown/);
+  assert.match(helper, /!\[\$\{label\}\]\(\$\{url\}\)/);
+  assert.match(helper, /Before loading screenshot", "before-loading\.png"/);
 });
 
 function zeroHrsIssueImplementationJob() {

@@ -692,6 +692,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.target_write_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_ALLOWED_OWNER: ${{ steps.target.outputs.target_owner }}
+          ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE: ${{ secrets.ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE }}
         run: pnpm run repair:zerohrs-android-proof -- "${{ inputs.job }}" --latest
 
       - name: Upload ZeroHrs Android proof media
