@@ -2129,12 +2129,17 @@ function dispatchClawSweeperReview(command: LooseRecord) {
       }
     : {};
   const payload = JSON.stringify({
-    event_type: "clawsweeper_item",
+    event_type: "clawsweeper_target_sweep",
     client_payload: {
       target_repo: command.repo,
       ...(command.target_branch ? { target_branch: String(command.target_branch) } : {}),
       item_number: String(command.issue_number),
       item_kind: command.target?.kind ?? "",
+      source_event: "issue_comment",
+      source_action: String(command.intent ?? "re_review"),
+      supersedes_in_progress: true,
+      hot_intake: "true",
+      apply_after_review: "true",
       additional_prompt: freeformReviewPrompt(command),
       ...(reviewBudget
         ? {
