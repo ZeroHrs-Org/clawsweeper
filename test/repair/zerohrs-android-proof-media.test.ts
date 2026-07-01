@@ -184,6 +184,22 @@ test("ZeroHrs Android proof publisher extracts Crabbox collected artifacts", () 
   assert.match(source, /"reports\/crabbox-android"/);
 });
 
+test("ZeroHrs Android proof comments use private-repo-safe file links", () => {
+  const source = fs.readFileSync("src/repair/zerohrs-android-proof-media.ts", "utf8");
+  const urlsStart = source.indexOf("function buildProofAssetUrls(");
+  const urlsEnd = source.indexOf("function publishProofComment(", urlsStart);
+  const commentEnd = source.indexOf("function findExistingProofComment(", urlsEnd);
+  assert.notEqual(urlsStart, -1);
+  assert.notEqual(urlsEnd, -1);
+  assert.notEqual(commentEnd, -1);
+  const helper = source.slice(urlsStart, commentEnd);
+
+  assert.match(helper, /github\.com\/\$\{ZEROHRS_REPO\}\/blob/);
+  assert.doesNotMatch(helper, /raw\.githubusercontent\.com/);
+  assert.doesNotMatch(helper, /!\[Before loading\]/);
+  assert.match(helper, /Before loading screenshot:/);
+});
+
 function zeroHrsIssueImplementationJob() {
   return [
     "---",

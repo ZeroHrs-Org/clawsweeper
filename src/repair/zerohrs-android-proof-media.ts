@@ -631,8 +631,8 @@ function buildProofAssetUrls({ prNumber, headSha }: { prNumber: number; headSha:
   const attempt = sanitizePathPart(process.env.GITHUB_RUN_ATTEMPT || "1");
   const sha = sanitizePathPart(String(headSha ?? "unknown").slice(0, 12) || "unknown");
   const prefix = `proof-media/pr-${prNumber}/run-${runId}-attempt-${attempt}-${sha}`;
-  const rawBase = `https://raw.githubusercontent.com/${ZEROHRS_REPO}/${PROOF_ASSET_BRANCH}/${prefix}`;
-  const urls = Object.fromEntries(MEDIA_FILES.map((name) => [name, `${rawBase}/${name}`]));
+  const fileBase = `https://github.com/${ZEROHRS_REPO}/blob/${PROOF_ASSET_BRANCH}/${prefix}`;
+  const urls = Object.fromEntries(MEDIA_FILES.map((name) => [name, `${fileBase}/${name}`]));
   return { prefix, urls };
 }
 
@@ -662,9 +662,8 @@ function publishProofComment({
     "",
     "### Loading screenshots",
     "",
-    `![Before loading](${published.urls["before-loading.png"]})`,
-    "",
-    `![After loading](${published.urls["after-loading.png"]})`,
+    `- Before loading screenshot: ${published.urls["before-loading.png"]}`,
+    `- After loading screenshot: ${published.urls["after-loading.png"]}`,
     "",
     "### Recordings",
     "",
