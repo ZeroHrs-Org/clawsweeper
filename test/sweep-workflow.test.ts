@@ -100,6 +100,9 @@ test("ZeroHrs exact feedback dispatch runs Android proof and syncs a review comm
     /crabbox run[\s\S]*--provider ssh[\s\S]*--static-host "\$HETZNER_IPV4"[\s\S]*bash scripts\/crabbox\/android-proof\.sh/,
   );
   assert.match(reviewJob, /ZEROHRS_ANDROID_PROOF_PROMPT/);
+  assert.match(reviewJob, /\.crabbox\/runs\//);
+  assert.match(reviewJob, /reports\/crabbox-android\//);
+  assert.match(reviewJob, /\$target_abs\/\.git\/info\/exclude/);
   assert.match(reviewJob, /name: zerohrs-android-proof-\$\{\{ matrix\.shard \}\}/);
   assert.match(
     publishJob,

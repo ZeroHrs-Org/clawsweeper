@@ -1352,6 +1352,13 @@ jobs:
             local path="$1"
             printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=' | base64 --decode > "$path"
           }
+          exclude_android_proof_artifacts() {
+            mkdir -p "$target_abs/.git/info"
+            {
+              echo ".crabbox/runs/"
+              echo "reports/crabbox-android/"
+            } >> "$target_abs/.git/info/exclude"
+          }
           if ! printf '%s' "$item_number" | grep -Eq '^[0-9]+$'; then
             echo "Skipping Android proof because this shard is not a single issue: $ITEM_NUMBERS"
             exit 0
@@ -1373,6 +1380,7 @@ jobs:
             write_placeholder_png "$proof_dir/before.png"
             write_placeholder_png "$proof_dir/after.png"
             write_local_proof_manifest "blocked" "missing Hetzner Android proof secrets"
+            exclude_android_proof_artifacts
             write_proof_prompt_env
             exit 0
           fi
@@ -1444,6 +1452,7 @@ jobs:
               fi
             fi
           )
+          exclude_android_proof_artifacts
           write_proof_prompt_env
 
       - name: Review shard
