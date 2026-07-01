@@ -205,6 +205,8 @@ jobs:
         env:
           CRABBOX_VERSION: ${{ vars.CLAWSWEEPER_CRABBOX_VERSION || '0.33.0' }}
           HETZNER_IPV4: ${{ secrets.HETZNER_IPV4 }}
+          HETZNER_IPV6: ${{ secrets.HETZNER_IPV6 }}
+          ZEROHRS_CRABBOX_STATIC_HOST: ${{ secrets.ZEROHRS_CRABBOX_STATIC_HOST }}
           ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY: ${{ secrets.ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY }}
           ZEROHRS_HETZNER_KNOWN_HOSTS: ${{ secrets.ZEROHRS_HETZNER_KNOWN_HOSTS }}
           ZEROHRS_TEST_EMAIL: ${{ secrets.ZEROHRS_TEST_EMAIL }}
@@ -229,9 +231,11 @@ jobs:
           chmod 700 "$HOME/.ssh" "$RUNNER_TEMP/zerohrs-crabbox"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.local/bin:$PATH"
+          proof_host="${ZEROHRS_CRABBOX_STATIC_HOST:-${HETZNER_IPV6:-${HETZNER_IPV4:-}}}"
 
           write_env HETZNER_IPV4 "${HETZNER_IPV4:-}"
-          write_env CRABBOX_STATIC_HOST "${HETZNER_IPV4:-}"
+          write_env HETZNER_IPV6 "${HETZNER_IPV6:-}"
+          write_env CRABBOX_STATIC_HOST "$proof_host"
           write_env ZEROHRS_TEST_EMAIL "${ZEROHRS_TEST_EMAIL:-}"
           write_env ZEROHRS_TEST_PASSWORD "${ZEROHRS_TEST_PASSWORD:-}"
           write_env ZEROHRS_ANDROID_GOOGLE_SERVICES_JSON_B64 "${ZEROHRS_ANDROID_GOOGLE_SERVICES_JSON_B64:-}"
@@ -247,10 +251,10 @@ jobs:
 
           if [ -n "${ZEROHRS_HETZNER_KNOWN_HOSTS:-}" ]; then
             printf '%s\n' "$ZEROHRS_HETZNER_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          elif [ -n "${HETZNER_IPV4:-}" ]; then
-            ssh-keyscan -T 15 -t ecdsa,ed25519,rsa "$HETZNER_IPV4" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          elif [ -n "$proof_host" ]; then
+            ssh-keyscan -T 15 -t ecdsa,ed25519,rsa "$proof_host" > "$HOME/.ssh/known_hosts" 2>/dev/null
           else
-            echo "::warning::HETZNER_IPV4 is not configured; ZeroHrs Android proof commands will report a missing runner host."
+            echo "::warning::ZeroHrs Crabbox static host is not configured; ZeroHrs Android proof commands will report a missing runner host."
           fi
           if [ -f "$HOME/.ssh/known_hosts" ]; then
             chmod 600 "$HOME/.ssh/known_hosts"
@@ -560,6 +564,8 @@ jobs:
         env:
           CRABBOX_VERSION: ${{ vars.CLAWSWEEPER_CRABBOX_VERSION || '0.33.0' }}
           HETZNER_IPV4: ${{ secrets.HETZNER_IPV4 }}
+          HETZNER_IPV6: ${{ secrets.HETZNER_IPV6 }}
+          ZEROHRS_CRABBOX_STATIC_HOST: ${{ secrets.ZEROHRS_CRABBOX_STATIC_HOST }}
           ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY: ${{ secrets.ZEROHRS_HETZNER_CRABBOX_PRIVATE_KEY }}
           ZEROHRS_HETZNER_KNOWN_HOSTS: ${{ secrets.ZEROHRS_HETZNER_KNOWN_HOSTS }}
           ZEROHRS_TEST_EMAIL: ${{ secrets.ZEROHRS_TEST_EMAIL }}
@@ -584,9 +590,11 @@ jobs:
           chmod 700 "$HOME/.ssh" "$RUNNER_TEMP/zerohrs-crabbox"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.local/bin:$PATH"
+          proof_host="${ZEROHRS_CRABBOX_STATIC_HOST:-${HETZNER_IPV6:-${HETZNER_IPV4:-}}}"
 
           write_env HETZNER_IPV4 "${HETZNER_IPV4:-}"
-          write_env CRABBOX_STATIC_HOST "${HETZNER_IPV4:-}"
+          write_env HETZNER_IPV6 "${HETZNER_IPV6:-}"
+          write_env CRABBOX_STATIC_HOST "$proof_host"
           write_env ZEROHRS_TEST_EMAIL "${ZEROHRS_TEST_EMAIL:-}"
           write_env ZEROHRS_TEST_PASSWORD "${ZEROHRS_TEST_PASSWORD:-}"
           write_env ZEROHRS_ANDROID_GOOGLE_SERVICES_JSON_B64 "${ZEROHRS_ANDROID_GOOGLE_SERVICES_JSON_B64:-}"
@@ -602,10 +610,10 @@ jobs:
 
           if [ -n "${ZEROHRS_HETZNER_KNOWN_HOSTS:-}" ]; then
             printf '%s\n' "$ZEROHRS_HETZNER_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          elif [ -n "${HETZNER_IPV4:-}" ]; then
-            ssh-keyscan -T 15 -t ecdsa,ed25519,rsa "$HETZNER_IPV4" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          elif [ -n "$proof_host" ]; then
+            ssh-keyscan -T 15 -t ecdsa,ed25519,rsa "$proof_host" > "$HOME/.ssh/known_hosts" 2>/dev/null
           else
-            echo "::warning::HETZNER_IPV4 is not configured; ZeroHrs Android proof commands will report a missing runner host."
+            echo "::warning::ZeroHrs Crabbox static host is not configured; ZeroHrs Android proof commands will report a missing runner host."
           fi
           if [ -f "$HOME/.ssh/known_hosts" ]; then
             chmod 600 "$HOME/.ssh/known_hosts"
