@@ -425,7 +425,7 @@ jobs:
     needs: cluster
     if: ${{ needs.cluster.result == 'success' && needs.cluster.outputs.job_exists == '1' && (inputs.mode == 'execute' || inputs.mode == 'autonomous') && !inputs.dry_run }}
     runs-on: ${{ inputs.execution_runner }}
-    timeout-minutes: 45
+    timeout-minutes: 180
     env:
       CLAWSWEEPER_ALLOWED_OWNER: ${{ vars.CLAWSWEEPER_ALLOWED_OWNER || 'openclaw' }}
       CLAWSWEEPER_ALLOW_EXECUTE: ${{ needs.cluster.outputs.allow_execute == '1' && '1' || '0' }}
@@ -684,6 +684,24 @@ jobs:
           GH_TOKEN: ${{ steps.target_write_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_ALLOWED_OWNER: ${{ steps.target.outputs.target_owner }}
         run: pnpm run repair:execute-fix -- "${{ inputs.job }}" --latest
+
+      - name: Publish ZeroHrs Android proof media
+        id: zerohrs_android_proof
+        if: ${{ steps.check_job.outputs.job_exists == '1' && steps.self_heal_head.outputs.matched != 'false' && env.CLAWSWEEPER_ALLOW_EXECUTE == '1' && env.CLAWSWEEPER_ALLOW_FIX_PR == '1' && contains(inputs.job, 'zerohrs-app') }}
+        timeout-minutes: 140
+        env:
+          GH_TOKEN: ${{ steps.target_write_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
+          CLAWSWEEPER_ALLOWED_OWNER: ${{ steps.target.outputs.target_owner }}
+        run: pnpm run repair:zerohrs-android-proof -- "${{ inputs.job }}" --latest
+
+      - name: Upload ZeroHrs Android proof media
+        if: ${{ always() && steps.check_job.outputs.job_exists == '1' && contains(inputs.job, 'zerohrs-app') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: zerohrs-android-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .clawsweeper-repair/runs/**/zerohrs-android-proof/**
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Record deterministic validation phase
         if: ${{ success() && steps.crabfleet_session.outcome == 'success' }}

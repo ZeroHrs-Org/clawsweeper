@@ -39,6 +39,7 @@
     "repair:apply-result": "node dist/repair/apply-result.js",
     "repair:execute-fix": "node dist/repair/execute-fix-artifact.js",
     "repair:post-flight": "node dist/repair/post-flight.js",
+    "repair:zerohrs-android-proof": "node dist/repair/zerohrs-android-proof-media.js",
     "repair:finalize-open-prs": "node dist/repair/finalize-open-prs.js",
     "repair:cleanup-replacement-labels": "node dist/repair/cleanup-replacement-labels.js",
     "repair:comment-router": "node dist/repair/comment-router.js",
