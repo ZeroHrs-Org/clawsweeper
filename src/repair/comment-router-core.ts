@@ -588,6 +588,10 @@ function zeroHrsIssueImplementationGuardrails(repo: unknown) {
   environment when available. During planning/review, capture only current-state
   reproduction artifacts; there is no after-fix proof yet. Do not accept Android
   launcher screenshots or generic start-page captures as sufficient proof.
+- Missing local \`adb\`, \`emulator\`, or \`ffmpeg\` on the GitHub Actions
+  runner is expected and is not a proof blocker. Use the configured Crabbox SSH
+  runner through the target repo proof wrapper or an issue-specific
+  \`crabbox run\` command for Android media capture.
 - The executor agent, not a hardcoded shared script, owns issue-specific proof.
   It must decide the reproduction path, capture before evidence from current
   \`main\`, capture after evidence from the fixed branch, and save media under

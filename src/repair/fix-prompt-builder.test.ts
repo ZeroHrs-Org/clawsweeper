@@ -114,6 +114,10 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /ZEROHRS_TEST_EMAIL/);
   assert.match(prompt, /ZEROHRS_TEST_PASSWORD/);
   assert.match(prompt, /do not print or commit their raw values/);
+  assert.match(prompt, /missing local `adb`, `emulator`, or `ffmpeg`/);
+  assert.match(prompt, /not a proof blocker/);
+  assert.match(prompt, /scripts\/crabbox\/run-android-proof\.sh/);
+  assert.match(prompt, /crabbox run --provider ssh/);
   assert.match(prompt, /do not hardcode one issue's navigation/);
   assert.match(prompt, /proof harness files are protected infrastructure/);
   assert.match(prompt, /inside the target checkout before returning/);

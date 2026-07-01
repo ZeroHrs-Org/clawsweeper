@@ -40,6 +40,9 @@ test("ZeroHrs feedback profile treats maintainer-authored reports as external fe
   assert.match(profile.promptNote, /ZEROHRS_TEST_EMAIL/);
   assert.match(profile.promptNote, /ZEROHRS_TEST_PASSWORD/);
   assert.match(profile.promptNote, /without printing or committing their raw values/);
+  assert.match(profile.promptNote, /Missing local adb, emulator, or ffmpeg/);
+  assert.match(profile.promptNote, /not a proof blocker/);
+  assert.match(profile.promptNote, /configured Crabbox SSH runner/);
   assert.doesNotMatch(profile.promptNote, /public ZeroHrs test account/);
   assert.match(
     profile.promptNote,

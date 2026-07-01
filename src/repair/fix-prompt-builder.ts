@@ -94,6 +94,7 @@ function renderTargetSpecificRepairGuidance(fixArtifact: LooseRecord) {
   return [
     "- ZeroHrs mobile feedback proof: the executor agent owns issue-specific Android verification when the issue touches mobile UI/runtime behavior;",
     "- when the app login flow is needed, use the configured `ZEROHRS_TEST_EMAIL` and `ZEROHRS_TEST_PASSWORD` environment variables; do not print or commit their raw values;",
+    "- missing local `adb`, `emulator`, or `ffmpeg` on the GitHub Actions runner is not a proof blocker; Android proof must run on the configured Crabbox SSH runner, using `bash scripts/crabbox/run-android-proof.sh` for the shared runner setup or `crabbox run --provider ssh ...` for issue-specific remote commands;",
     "- do not hardcode one issue's navigation, text labels, or reproduction path into shared proof scripts such as `scripts/crabbox/android-proof.sh` or `scripts/crabbox/run-android-proof.sh`; choose the reproduction path for this issue during execution and keep reusable scripts generic;",
     "- proof harness files are protected infrastructure for feedback issue PRs; do not leave edits to `scripts/crabbox/android-proof.sh`, `scripts/crabbox/run-android-proof.sh`, their tests, or `docs/crabbox-hetzner-feedback.md` as part of the target diff;",
     "- capture and save proof media under `reports/clawsweeper/android-proof` inside the target checkout before returning; ClawSweeper only collects and publishes that checkout directory after you return;",
