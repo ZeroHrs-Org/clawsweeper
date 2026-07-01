@@ -152,6 +152,18 @@ const ZEROHRS_ANDROID_PROOF_HARNESS_FILES = [
   "scripts/crabbox/run-android-proof.sh",
   "scripts/crabbox/run-android-proof.test.sh",
 ];
+const EXECUTOR_ANDROID_REQUIRED_PROOF_FILES = [
+  "proof-manifest.json",
+  "command.log",
+  "emulator.log",
+  "app.log",
+  "before-loading.png",
+  "after-loading.png",
+  "before.mp4",
+  "after.mp4",
+  "before.png",
+  "after.png",
+];
 const PROOF_ARTIFACT_GIT_EXCLUDE_PATHS = [
   `:(exclude)${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/**`,
   `:(exclude)${LEGACY_ANDROID_PROOF_SOURCE_DIR}/**`,
@@ -2192,6 +2204,38 @@ function editValidatePrepareMerge({
         headSha: currentHead(targetDir),
       });
 
+      const restoredProofHarnessFiles = restoreZeroHrsIssueProofHarness({ targetDir });
+      const proofRequirement = zeroHrsIssueProofRequirement({
+        targetDir,
+        restoredProofHarnessFiles,
+      });
+      if (proofRequirement.status !== "satisfied") {
+        previousSummary = [
+          readTextIfExists(summaryPath).trim(),
+          proofRequirement.reason,
+          "For the next attempt, do not edit protected proof harness files. Run Crabbox on the configured SSH runner and copy the required completed proof files into reports/clawsweeper/android-proof before returning.",
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+          .trim();
+        logProgress("ZeroHrs Android proof requirement not satisfied after Codex edit pass", {
+          mode,
+          attempt,
+          max_attempts: maxEditAttempts,
+          reason: proofRequirement.reason,
+          restored_proof_harness_files: restoredProofHarnessFiles,
+        });
+        updateAutomergeProgressStatus({
+          id: `codex-edit-${mode}-${attempt}`,
+          label: `Codex edit ${attempt}`,
+          status: attempt < maxEditAttempts ? "retrying" : "blocked",
+          details: proofRequirement.reason,
+          headSha: currentHead(targetDir),
+        });
+        if (attempt < maxEditAttempts) continue;
+        throw new Error(proofRequirement.reason);
+      }
+
       const hasWorkingTreeChanges = Boolean(committableGitStatus({ targetDir }).trim());
       const hasHeadChanges = currentHead(targetDir) !== headBeforeAttempt;
       producedChanges = producedChanges || hasWorkingTreeChanges || hasHeadChanges;
@@ -3449,6 +3493,71 @@ function restoreZeroHrsIssueProofHarness({ targetDir }: { targetDir: string }) {
     files: restoreFiles,
   });
   return restoreFiles;
+}
+
+function zeroHrsIssueProofRequirement({
+  targetDir,
+  restoredProofHarnessFiles = [],
+}: {
+  targetDir: string;
+  restoredProofHarnessFiles?: string[];
+}) {
+  if (!isZeroHrsIssueImplementation()) return { status: "satisfied" };
+  const sourceDir = path.join(targetDir, EXECUTOR_ANDROID_PROOF_SOURCE_DIR);
+  const restoredNote = restoredProofHarnessFiles.length
+    ? ` Protected proof harness edits were restored before staging: ${restoredProofHarnessFiles.join(", ")}.`
+    : "";
+  if (!fs.existsSync(sourceDir)) {
+    return {
+      status: "missing",
+      reason: `ZeroHrs Android proof is missing at ${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}.${restoredNote}`,
+    };
+  }
+  for (const name of EXECUTOR_ANDROID_REQUIRED_PROOF_FILES) {
+    const filePath = path.join(sourceDir, name);
+    if (!fs.existsSync(filePath)) {
+      return {
+        status: "missing",
+        reason: `ZeroHrs Android proof is missing required artifact ${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/${name}.${restoredNote}`,
+      };
+    }
+    if (fs.statSync(filePath).size <= 0) {
+      return {
+        status: "missing",
+        reason: `ZeroHrs Android proof artifact is empty: ${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/${name}.${restoredNote}`,
+      };
+    }
+  }
+  const manifestPath = path.join(sourceDir, "proof-manifest.json");
+  let manifest: LooseRecord;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest is not valid JSON: ${String(error instanceof Error ? error.message : error)}.${restoredNote}`,
+    };
+  }
+  if (manifest.status !== "completed") {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest status is ${manifest.status ?? "missing"}, expected completed.${restoredNote}`,
+    };
+  }
+  for (const field of [
+    manifest?.captures?.before?.loading_screenshot,
+    manifest?.captures?.before?.recording,
+    manifest?.captures?.after?.loading_screenshot,
+    manifest?.captures?.after?.recording,
+  ]) {
+    if (typeof field !== "string" || !field.trim()) {
+      return {
+        status: "invalid",
+        reason: `ZeroHrs Android proof manifest is missing structured before/after media metadata.${restoredNote}`,
+      };
+    }
+  }
+  return { status: "satisfied" };
 }
 
 function isZeroHrsIssueImplementation() {

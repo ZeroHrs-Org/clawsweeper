@@ -118,8 +118,10 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /not a proof blocker/);
   assert.match(prompt, /scripts\/crabbox\/run-android-proof\.sh/);
   assert.match(prompt, /crabbox run --provider ssh/);
-  assert.match(prompt, /do not hardcode one issue's navigation/);
-  assert.match(prompt, /proof harness files are protected infrastructure/);
+  assert.match(prompt, /do not edit shared proof harness files for one issue/);
+  assert.match(prompt, /ClawSweeper restores them before staging/);
+  assert.match(prompt, /temporary proof driver/);
+  assert.match(prompt, /do not return saying Android proof still needs to be generated/);
   assert.match(prompt, /inside the target checkout before returning/);
   assert.match(prompt, /\.crabbox\/runs\/\.\.\.-artifacts\.tgz/);
   assert.match(prompt, /do not leave the only proof copy under `\/tmp`/);

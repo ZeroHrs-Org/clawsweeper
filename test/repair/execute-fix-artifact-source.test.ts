@@ -208,12 +208,14 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   const restoreStart = source.indexOf("function restoreZeroHrsIssueProofHarness(");
   const restoreEnd = source.indexOf("function isZeroHrsIssueImplementation(", restoreStart);
   const sourceStart = source.indexOf("function zeroHrsProofHarnessRestoreSource(");
+  const proofRequirementStart = source.indexOf("function zeroHrsIssueProofRequirement(");
 
   assert.notEqual(checkpointStart, -1);
   assert.notEqual(checkpointEnd, -1);
   assert.notEqual(restoreStart, -1);
   assert.notEqual(restoreEnd, -1);
   assert.notEqual(sourceStart, -1);
+  assert.notEqual(proofRequirementStart, -1);
 
   const checkpoint = source.slice(checkpointStart, checkpointEnd);
   const restore = source.slice(restoreStart, restoreEnd);
@@ -228,6 +230,11 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   const changedBlock = restore.slice(changedStart, changedEnd);
 
   assert.match(source, /ZEROHRS_ANDROID_PROOF_HARNESS_FILES = \[/);
+  assert.match(source, /EXECUTOR_ANDROID_REQUIRED_PROOF_FILES = \[/);
+  assert.match(source, /zeroHrsIssueProofRequirement\(\{/);
+  assert.match(source, /do not edit protected proof harness files/);
+  assert.match(source, /manifest\.status !== "completed"/);
+  assert.match(source, /captures\?\.before\?\.loading_screenshot/);
   assert.match(source, /scripts\/crabbox\/android-proof\.sh/);
   assert.match(source, /scripts\/crabbox\/run-android-proof\.sh/);
   assert.match(source, /docs\/crabbox-hetzner-feedback\.md/);
