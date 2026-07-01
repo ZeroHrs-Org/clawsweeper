@@ -8,6 +8,7 @@ import test from "node:test";
 import {
   canSkipInternalCodexReviewForRepairDelta,
   preflightTargetValidationPlan,
+  prepareTargetValidationEnvironment,
   prepareTargetToolchain,
   repairDeltaValidationPlan,
   requiredValidationCommands,
@@ -1014,6 +1015,63 @@ test("target validation strips Codex, model, and GitHub write credentials", () =
     );
   } finally {
     for (const [key, value] of Object.entries(previous)) restoreEnv(key, value);
+  }
+});
+
+test("ZeroHrs target validation seeds env from secret without leaking write credentials", () => {
+  const required = [
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "COMPOSIO_API_KEY",
+    "COMPOSIO_WEBHOOK_SECRET",
+    "RECALL_API_KEY",
+    "RECALL_WORKSPACE_VERIFICATION_SECRET",
+    "PUBLIC_API_BASE_URL",
+    "RESEND_API_KEY",
+    "RESEND_FROM_EMAIL",
+    "GOOGLE_WEB_CLIENT_ID",
+    "GOOGLE_IOS_CLIENT_ID",
+    "GOOGLE_ANDROID_CLIENT_ID",
+  ];
+  const secretEnv = `${required.map((key) => `${key}=secret-${key.toLowerCase()}`).join("\n")}\n`;
+  const script = `node -e 'const fs=require("node:fs"); const required=${JSON.stringify(required)}; if (!fs.existsSync(".env")) process.exit(7); for (const key of required) if (!process.env[key]) process.exit(8); for (const key of ["GH_TOKEN","GITHUB_TOKEN","OPENAI_API_KEY","CODEX_API_KEY"]) if (process.env[key]) process.exit(9);'`;
+  const cwd = gitPackageFixture({ "check:zerohrs-env": script });
+  fs.mkdirSync(path.join(cwd, "backend", "control-plane"), { recursive: true });
+  git(cwd, "add", ".");
+  git(cwd, "commit", "-m", "initial");
+  attachOrigin(cwd);
+
+  const options = validationOptions("ZeroHrs-Org/zerohrs-app", {
+    toolchain: {
+      packageManager: "pnpm",
+      baseValidationCommands: [],
+      changedGate: null,
+    },
+  });
+  const previousSecrets = {
+    CODEX_API_KEY: process.env.CODEX_API_KEY,
+    GH_TOKEN: process.env.GH_TOKEN,
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    ZEROHRS_TARGET_ENV_B64: process.env.ZEROHRS_TARGET_ENV_B64,
+  };
+  process.env.CODEX_API_KEY = "codex-secret";
+  process.env.GH_TOKEN = "gh-secret";
+  process.env.GITHUB_TOKEN = "github-secret";
+  process.env.OPENAI_API_KEY = "openai-secret";
+  process.env.ZEROHRS_TARGET_ENV_B64 = Buffer.from(secretEnv, "utf8").toString("base64");
+  try {
+    prepareTargetValidationEnvironment(cwd, options);
+    assert.equal(fs.readFileSync(path.join(cwd, ".env"), "utf8"), secretEnv);
+    assert.equal(
+      fs.readFileSync(path.join(cwd, "backend", "control-plane", ".env"), "utf8"),
+      secretEnv,
+    );
+    assert.deepEqual(runAllowedValidationCommands(["pnpm check:zerohrs-env"], cwd, options), [
+      "pnpm check:zerohrs-env",
+    ]);
+  } finally {
+    for (const [key, value] of Object.entries(previousSecrets)) restoreEnv(key, value);
   }
 });
 

@@ -685,6 +685,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.target_write_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
           CLAWSWEEPER_ALLOWED_OWNER: ${{ steps.target.outputs.target_owner }}
+          ZEROHRS_TARGET_ENV_B64: ${{ secrets.ZEROHRS_TARGET_ENV_B64 }}
         run: pnpm run repair:execute-fix -- "${{ inputs.job }}" --latest
 
       - name: Publish ZeroHrs Android proof media

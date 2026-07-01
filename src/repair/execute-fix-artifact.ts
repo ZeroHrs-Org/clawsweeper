@@ -107,6 +107,7 @@ import {
 } from "./repair-branch-push-errors.js";
 import {
   canSkipInternalCodexReviewForRepairDelta,
+  prepareTargetValidationEnvironment,
   prepareTargetToolchain,
   preflightTargetValidationPlan,
   repairDeltaValidationPlan,
@@ -563,6 +564,7 @@ if (typeof args["work-dir"] !== "string") fs.rmSync(workRoot, { recursive: true,
 fs.mkdirSync(workRoot, { recursive: true });
 
 ensureTargetCheckout(result.repo, targetDir);
+prepareTargetValidationEnvironment(targetDir, currentTargetValidationOptions());
 setupGitIdentity(targetDir);
 
 logProgress("checking target validation plan", { target_dir: targetDir });
