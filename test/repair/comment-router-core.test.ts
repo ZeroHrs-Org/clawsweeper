@@ -580,7 +580,7 @@ test("command response markers can match across head changes", () => {
         workflow: "repair cluster worker",
         job_path: "jobs/openclaw/inbox/automerge-openclaw-openclaw-75423.md",
         mode: "maintainer-command",
-        model: "gpt-5.4",
+        model: "gpt-5.4-mini",
       },
     },
   );
@@ -2244,7 +2244,7 @@ test("renderResponse reports trusted repair dispatches without losing guardrails
       workflow: "repair-cluster-worker.yml",
       job_path: "jobs/openclaw/inbox/example.md",
       mode: "autonomous",
-      model: "gpt-5.4",
+      model: "gpt-5.4-mini",
       run_url: "https://github.com/openclaw/clawsweeper/actions/runs/123456789",
     },
   );
@@ -2271,7 +2271,7 @@ test("renderResponse gives command replies stateful lobster badges", () => {
   );
   const repairBody = renderResponse(
     { comment_id: "458", intent: "implement_issue", target: {} },
-    { model: "gpt-5.4" },
+    { model: "gpt-5.4-mini" },
   );
   const doneBody = renderResponse(
     {
@@ -2387,7 +2387,7 @@ test("renderResponse reports automerge repair dispatches as enabled", () => {
         workflow: "repair cluster worker",
         job_path: "jobs/openclaw/inbox/automerge-openclaw-openclaw-75401.md",
         mode: "autonomous",
-        model: "gpt-5.4",
+        model: "gpt-5.4-mini",
         run_url: "https://github.com/openclaw/clawsweeper/actions/runs/25242426838",
       },
     },
@@ -2480,7 +2480,7 @@ test("renderResponse reports issue implementation repair dispatches", () => {
       workflow: "repair cluster worker",
       job_path: "jobs/openclaw/inbox/issue-openclaw-openclaw-74113.md",
       mode: "autonomous",
-      model: "gpt-5.4",
+      model: "gpt-5.4-mini",
       run_url: "https://github.com/openclaw/clawsweeper/actions/runs/25242426839",
     },
   );
@@ -2629,7 +2629,7 @@ test("assist workflow preserves flat field fallbacks after nested dispatch field
   );
   assert.match(
     workflow,
-    /CLAWSWEEPER_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \|\| vars\.CLAWSWEEPER_MODEL \|\| 'gpt-5\.4' \}\}/,
+    /CLAWSWEEPER_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \|\| vars\.CLAWSWEEPER_MODEL \|\| 'gpt-5\.4-mini' \}\}/,
   );
   assert.match(workflow, /MODEL: \$\{\{ env\.CLAWSWEEPER_MODEL \}\}/);
   assert.match(workflow, /CLAWSWEEPER_INTERNAL_MODEL: \$\{\{ env\.CLAWSWEEPER_MODEL \}\}/);
@@ -2693,7 +2693,7 @@ test("renderResponse reports automerge repair dispatches", () => {
       workflow: "repair-cluster-worker.yml",
       job_path: "jobs/openclaw/inbox/automerge-openclaw-openclaw-74156.md",
       mode: "autonomous",
-      model: "gpt-5.4",
+      model: "gpt-5.4-mini",
     },
   );
 
@@ -2719,7 +2719,7 @@ test("renderResponse reports automerge pass with failing checks as repair dispat
         workflow: "repair cluster worker",
         job_path: "jobs/openclaw/inbox/automerge-openclaw-openclaw-74506.md",
         mode: "autonomous",
-        model: "gpt-5.4",
+        model: "gpt-5.4-mini",
       },
     },
   );

@@ -1145,7 +1145,7 @@ test("Codex workflows install pinned CLI releases and keep the model secret", ()
   for (const workflow of workflows) {
     assert.match(
       workflow,
-      /CLAWSWEEPER_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \|\| vars\.CLAWSWEEPER_MODEL \|\| 'gpt-5\.4' \}\}/,
+      /CLAWSWEEPER_MODEL: \$\{\{ secrets\.CLAWSWEEPER_MODEL \|\| vars\.CLAWSWEEPER_MODEL \|\| 'gpt-5\.4-mini' \}\}/,
     );
     assert.match(workflow, /CODEX_AUTH_JSON_B64: \$\{\{ secrets\.CODEX_AUTH_JSON_B64 \}\}/);
     assert.match(
