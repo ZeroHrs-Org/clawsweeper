@@ -3532,8 +3532,10 @@ function zeroHrsForbiddenProofRouteDiff({ targetDir }: { targetDir: string }) {
     ),
   ]);
   const fileFindings = changedFiles
-    .filter((file) =>
-      ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS.some((pattern) => pattern.test(file)),
+    .filter(
+      (file) =>
+        fs.existsSync(path.join(targetDir, file)) &&
+        ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS.some((pattern) => pattern.test(file)),
     )
     .map((file) => `forbidden proof-route file in target diff: ${file}`);
   const diffText = run(
@@ -3541,13 +3543,22 @@ function zeroHrsForbiddenProofRouteDiff({ targetDir }: { targetDir: string }) {
     ["diff", "-U0", restoreSource, "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS],
     { cwd: targetDir },
   );
+  const addedDiffText = addedDiffLinesOnly(diffText);
   const textFindings = ZEROHRS_FORBIDDEN_PROOF_ROUTE_TEXT_PATTERNS.filter((pattern) =>
-    pattern.test(diffText),
+    pattern.test(addedDiffText),
   ).map((pattern) => `forbidden proof-route product diff pattern matched: ${pattern.source}`);
   const untrackedTextFindings = changedFiles
     .filter((file) => !fileFindings.some((finding) => finding.endsWith(file)))
     .flatMap((file) => zeroHrsForbiddenProofRouteFileTextFindings(targetDir, file));
   return uniqueStrings([...fileFindings, ...textFindings, ...untrackedTextFindings]);
+}
+
+function addedDiffLinesOnly(diffText: string) {
+  return diffText
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .map((line) => line.slice(1))
+    .join("\n");
 }
 
 function zeroHrsForbiddenProofRouteFileTextFindings(targetDir: string, relativePath: string) {

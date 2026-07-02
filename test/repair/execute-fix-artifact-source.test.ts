@@ -265,6 +265,11 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /Constants\\\.expoConfig/);
   assert.match(source, /assertNoZeroHrsProofRouteProductDiff\(\{/);
   assert.match(source, /zeroHrsForbiddenProofRouteDiff\(\{/);
+  assert.match(source, /addedDiffLinesOnly\(diffText\)/);
+  assert.match(source, /function addedDiffLinesOnly\(diffText: string\)/);
+  assert.match(source, /line\.startsWith\("\+"\) && !line\.startsWith\("\+\+\+"\)/);
+  assert.match(source, /fs\.existsSync\(path\.join\(targetDir, file\)\)/);
+  assert.match(source, /pattern\.test\(addedDiffText\)/);
   assert.match(source, /ZeroHrs Android proof must use manual app navigation/);
   assert.match(source, /committed proof-route product code/);
   assert.match(source, /Remove proof-only navigation, env, Constants\.expoConfig/);
