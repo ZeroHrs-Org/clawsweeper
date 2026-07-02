@@ -980,6 +980,8 @@ test("renderIssueImplementationJob keeps soft Execute Plan overrides in the fix 
   assert.match(job.body, /after-loading\.png/);
   assert.match(job.body, /after\.mp4/);
   assert.match(job.body, /seed or mock the\s+local dev\/test database/);
+  assert.match(job.body, /create and use local admin\/referral codes/);
+  assert.match(job.body, /local trial\/plan\s+state/);
   assert.doesNotMatch(job.body, /do not emit a `new_fix_pr` artifact/);
 });
 

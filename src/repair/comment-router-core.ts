@@ -606,10 +606,14 @@ function zeroHrsIssueImplementationGuardrails(repo: unknown) {
 	  \`zeroHrsProofRoute\`/\`proofRoute\` files, or tests whose only purpose is
 	  proof navigation. Temporary proof drivers belong outside the committed app
 	  diff or under ignored proof artifacts.
-- When reproduction depends on account, app, or database state, seed or mock the
-  local dev/test database with the minimum rows needed to reproduce the report,
-  document the seed commands or fixture, and never use production data.
-`;
+	- When reproduction depends on account, app, or database state, seed or mock the
+	  local dev/test database with the minimum rows needed to reproduce the report,
+	  document the seed commands or fixture, and never use production data.
+	- If a billing, onboarding, entitlement, referral, or account gate blocks the
+	  reported screen, create and use local admin/referral codes, local trial/plan
+	  state, or other minimal local account state needed to reach the real in-app
+	  route. Document the code type and seed commands in the proof artifacts.
+	`;
 }
 
 export function automergeChangelogBlockReason({ repo }: LooseRecord): string | null {

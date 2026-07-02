@@ -134,6 +134,9 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /Constants\.expoConfig/);
   assert.match(prompt, /tests whose only purpose is proof navigation/);
   assert.match(prompt, /outside the committed target app diff/);
+  assert.match(prompt, /create and use local admin\/referral codes/);
+  assert.match(prompt, /local trial\/plan state/);
+  assert.match(prompt, /document the commands, code type, and seeded state/);
   assert.match(prompt, /do not set `ZEROHRS_ANDROID_PROOF_DRY_RUN=1`/);
   assert.match(prompt, /do not create placeholder or fake png\/mp4 media/);
   assert.match(prompt, /do not return saying Android proof still needs to be generated/);
@@ -162,7 +165,7 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
     prompt,
     /do not spend the edit pass running broad `pnpm run diff:checks` repeatedly/,
   );
-  assert.match(prompt, /seed or mock minimal local dev\/test database rows/);
+  assert.match(prompt, /seed or mock minimal local dev\/test rows/);
   assert.match(prompt, /keep proof artifacts out of the PR diff/);
 });
 

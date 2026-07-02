@@ -74,7 +74,12 @@ test("ZeroHrs feedback profile treats maintainer-authored reports as external fe
   assert.match(profile.promptNote, /captures\.after\.fix_evidence/);
   assert.match(profile.promptNote, /before-loading\.png/);
   assert.match(profile.promptNote, /before\.mp4/);
-  assert.match(profile.promptNote, /seed or mock data in the local dev\/test database/);
+  assert.match(
+    profile.promptNote,
+    /account, app, billing, referral, entitlement, or database state/,
+  );
+  assert.match(profile.promptNote, /create and use local admin\/referral codes/);
+  assert.match(profile.promptNote, /local trial\/plan state/);
   assert.deepEqual(profile.applyCloseRules.issue, ["implemented_on_main"]);
 });
 
