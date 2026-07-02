@@ -180,6 +180,10 @@ test("ZeroHrs issue implementation planning captures and publishes current-state
   assert.match(workflow, /ref: main/);
   assert.match(workflow, /reports\/crabbox-android\/before-loading\.png/);
   assert.match(workflow, /reports\/crabbox-android\/before\.mp4/);
+  assert.match(workflow, /annotate_planning_proof_manifest/);
+  assert.match(workflow, /manifest\.item_number = itemNumber/);
+  assert.match(workflow, /source_issue_url/);
+  assert.match(workflow, /planning_review_current_state/);
   assert.match(workflow, /Planning\/review evidence is current-state reproduction evidence only/);
   assert.match(workflow, /manually navigating the real app UI/);
   assert.match(workflow, /issue-specific route or visible reported state/);

@@ -396,6 +396,24 @@ jobs:
             fi
           }
 
+          annotate_planning_proof_manifest() {
+            PROOF_MANIFEST_PATH="$proof_dir/proof-manifest.json" node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const manifestPath = process.env.PROOF_MANIFEST_PATH;
+          const itemNumber = Number(process.env.ITEM_NUMBER);
+          if (!manifestPath || !Number.isInteger(itemNumber) || itemNumber <= 0 || !fs.existsSync(manifestPath)) {
+            process.exit(0);
+          }
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+          manifest.item_number = itemNumber;
+          manifest.issue_number ??= itemNumber;
+          manifest.source_issue_url ??= `https://github.com/${process.env.TARGET_REPO}/issues/${itemNumber}`;
+          manifest.proof_context ??= "planning_review_current_state";
+          fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+          }
+
           exclude_android_proof_artifacts() {
             mkdir -p "$target_abs/.git/info"
             {
@@ -464,6 +482,7 @@ jobs:
             fi
             ensure_local_proof_artifacts
           )
+          annotate_planning_proof_manifest
 
       - name: Publish ZeroHrs Android issue planning proof media
         if: ${{ steps.zerohrs_review_proof_target.outputs.should_run == '1' && (steps.zerohrs_review_proof_token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') }}
