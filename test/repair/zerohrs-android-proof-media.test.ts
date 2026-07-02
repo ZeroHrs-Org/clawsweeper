@@ -421,7 +421,7 @@ test("ZeroHrs Android proof publisher rejects generic before-after media without
   }
 });
 
-test("ZeroHrs Android proof publisher accepts legacy completed media without prose evidence", () => {
+test("ZeroHrs Android proof publisher rejects completed media without prose evidence", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-proof-media-legacy-"));
   const fakeBin = path.join(tmp, "bin");
   const jobPath = path.join(tmp, "job.md");
@@ -522,7 +522,7 @@ test("ZeroHrs Android proof publisher accepts legacy completed media without pro
             loading_screenshot: "after-loading.png",
             screenshot: "after.png",
             recording: "after.mp4",
-            issue_reproduced: false,
+            issue_resolved: true,
           },
         },
       },
@@ -532,40 +532,27 @@ test("ZeroHrs Android proof publisher accepts legacy completed media without pro
   );
 
   try {
-    execFileSync(
-      process.execPath,
-      ["dist/repair/zerohrs-android-proof-media.js", jobPath, resultPath, "--dry-run"],
-      {
-        cwd: repoRoot,
-        env: {
-          ...process.env,
-          CLAWSWEEPER_ALLOWED_OWNER: "ZeroHrs-Org",
-          GITHUB_RUN_ID: "28504191806",
-          GITHUB_RUN_ATTEMPT: "1",
-          PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
+    assert.throws(() =>
+      execFileSync(
+        process.execPath,
+        ["dist/repair/zerohrs-android-proof-media.js", jobPath, resultPath],
+        {
+          cwd: repoRoot,
+          env: {
+            ...process.env,
+            CLAWSWEEPER_ALLOWED_OWNER: "ZeroHrs-Org",
+            GITHUB_RUN_ID: "28504191806",
+            GITHUB_RUN_ATTEMPT: "1",
+            PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
+          },
+          stdio: "pipe",
         },
-        stdio: "pipe",
-      },
+      ),
     );
 
     const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
-    assert.equal(report.status, "planned");
-    assert.equal(report.actions[0].status, "planned");
-    assert.deepEqual(
-      report.actions[0].files.map((file: { name: string }) => file.name),
-      [
-        "proof-manifest.json",
-        "command.log",
-        "emulator.log",
-        "app.log",
-        "before-loading.png",
-        "after-loading.png",
-        "before.mp4",
-        "after.mp4",
-        "before.png",
-        "after.png",
-      ],
-    );
+    assert.equal(report.status, "failed");
+    assert.match(String(report.reason), /captures\.before\.issue_evidence/);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

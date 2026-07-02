@@ -266,8 +266,9 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /launcher_screen_detected as false/);
   assert.match(source, /captures\?\.before\?\.loading_screenshot/);
   assert.match(source, /captures\.before\.issue_reproduced/);
+  assert.match(source, /captures\.before.*issue_evidence/s);
   assert.match(source, /captures\.after\.issue_resolved/);
-  assert.match(source, /captures\.after\.issue_reproduced/);
+  assert.match(source, /captures\.after.*fix_evidence/s);
   assert.match(proofSatisfied, /copyExecutorAndroidProofArtifacts\(resultPath\)/);
   assert.match(
     proofSatisfied,
