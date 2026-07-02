@@ -94,6 +94,10 @@ if (targetCheckout) {
   process.env.CLAWSWEEPER_TARGET_CHECKOUT = targetCheckout;
   promptContext.targetCheckout = targetCheckout;
 }
+const zeroHrsAndroidProofPrompt = String(process.env.ZEROHRS_ANDROID_PROOF_PROMPT ?? "").trim();
+if (zeroHrsAndroidProofPrompt) {
+  promptContext.zeroHrsAndroidProofPrompt = zeroHrsAndroidProofPrompt;
+}
 
 if (!dryRun) {
   const plannerArgs = [

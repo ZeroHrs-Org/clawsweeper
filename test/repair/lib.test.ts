@@ -38,6 +38,31 @@ test("renderPrompt loads tracked repair prompt templates", () => {
   assert.match(prompt, /Repair smoke\./);
 });
 
+test("renderPrompt includes ZeroHrs Android proof evidence when provided", () => {
+  const prompt = renderPrompt(
+    {
+      raw: '---\nrepo: ZeroHrs-Org/zerohrs-app\ncluster_id: issue-zerohrs-org-zerohrs-app-274\nmode: plan\nallowed_actions:\n  - comment\ncandidates:\n  - "#274"\n---\nPlan issue.',
+      frontmatter: {
+        repo: "ZeroHrs-Org/zerohrs-app",
+        cluster_id: "issue-zerohrs-org-zerohrs-app-274",
+        mode: "plan",
+        allowed_actions: ["comment"],
+        candidates: ["#274"],
+      },
+    },
+    "plan",
+    {
+      zeroHrsAndroidProofPrompt:
+        "Planning/review evidence is current-state reproduction evidence only. Inspect before-loading.png and before.mp4 captured after manually navigating the real app UI.",
+    },
+  );
+
+  assert.match(prompt, /## ZeroHrs Android proof evidence/);
+  assert.match(prompt, /current-state reproduction evidence only/);
+  assert.match(prompt, /before-loading\.png and before\.mp4/);
+  assert.match(prompt, /manually navigating the real app UI/);
+});
+
 test("validateJob rejects unknown canonical job intents", () => {
   const frontmatter = parseSimpleYaml(`repo: openclaw/openclaw
 cluster_id: smoke

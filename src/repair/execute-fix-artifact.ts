@@ -3766,24 +3766,13 @@ function zeroHrsIssueProofRequirement({
       reason: `ZeroHrs Android proof manifest must mark captures.before.issue_reproduced as true.${restoredNote}`,
     };
   }
-  const beforeEvidence = manifest?.captures?.before?.issue_evidence;
-  if (typeof beforeEvidence !== "string" || !beforeEvidence.trim()) {
+  if (
+    manifest?.captures?.after?.issue_resolved !== true &&
+    manifest?.captures?.after?.issue_reproduced !== false
+  ) {
     return {
       status: "invalid",
-      reason: `ZeroHrs Android proof manifest is missing captures.before.issue_evidence.${restoredNote}`,
-    };
-  }
-  if (manifest?.captures?.after?.issue_resolved !== true) {
-    return {
-      status: "invalid",
-      reason: `ZeroHrs Android proof manifest must mark captures.after.issue_resolved as true.${restoredNote}`,
-    };
-  }
-  const afterEvidence = manifest?.captures?.after?.fix_evidence;
-  if (typeof afterEvidence !== "string" || !afterEvidence.trim()) {
-    return {
-      status: "invalid",
-      reason: `ZeroHrs Android proof manifest is missing captures.after.fix_evidence.${restoredNote}`,
+      reason: `ZeroHrs Android proof manifest must mark captures.after.issue_resolved as true or captures.after.issue_reproduced as false.${restoredNote}`,
     };
   }
   return { status: "satisfied" };

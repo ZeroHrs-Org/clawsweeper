@@ -143,6 +143,59 @@ test("ZeroHrs Android proof workflow runs before issue implementation post-fligh
   assert.match(workflow, /path: \.clawsweeper-repair\/runs\/\*\*\/zerohrs-android-proof\/\*\*/);
 });
 
+test("ZeroHrs issue implementation planning captures and publishes current-state Android proof", () => {
+  const workflow = fs.readFileSync(".github/workflows/repair-cluster-worker.yml", "utf8");
+  const resolveIndex = workflow.indexOf("name: Resolve ZeroHrs Android planning proof target");
+  const checkoutIndex = workflow.indexOf(
+    "name: Checkout ZeroHrs target for Android planning proof",
+  );
+  const runProofIndex = workflow.indexOf("name: Run ZeroHrs Android issue planning evidence");
+  const publishProofIndex = workflow.indexOf(
+    "name: Publish ZeroHrs Android issue planning proof media",
+  );
+  const uploadProofIndex = workflow.indexOf(
+    "name: Upload ZeroHrs Android issue planning proof media",
+  );
+  const workerIndex = workflow.indexOf("name: Run worker");
+
+  assert.notEqual(resolveIndex, -1);
+  assert.notEqual(checkoutIndex, -1);
+  assert.notEqual(runProofIndex, -1);
+  assert.notEqual(publishProofIndex, -1);
+  assert.notEqual(uploadProofIndex, -1);
+  assert.notEqual(workerIndex, -1);
+  assert.ok(
+    resolveIndex < checkoutIndex &&
+      checkoutIndex < runProofIndex &&
+      runProofIndex < publishProofIndex &&
+      publishProofIndex < uploadProofIndex &&
+      uploadProofIndex < workerIndex,
+    "current-state Android proof must be captured and published before the planner runs",
+  );
+  assert.match(workflow, /source_issue_number/);
+  assert.match(
+    workflow,
+    /repository: \$\{\{ steps\.zerohrs_review_proof_target\.outputs\.target_repo \}\}/,
+  );
+  assert.match(workflow, /ref: main/);
+  assert.match(workflow, /reports\/crabbox-android\/before-loading\.png/);
+  assert.match(workflow, /reports\/crabbox-android\/before\.mp4/);
+  assert.match(workflow, /Planning\/review evidence is current-state reproduction evidence only/);
+  assert.match(workflow, /manually navigating the real app UI/);
+  assert.match(workflow, /issue-specific route or visible reported state/);
+  assert.match(workflow, /product proof routes/);
+  assert.match(workflow, /proof-route env flags/);
+  assert.match(workflow, /tests whose only purpose is proof navigation/);
+  assert.match(workflow, /crabbox run[\s\S]*--provider ssh/);
+  assert.match(workflow, /bash scripts\/crabbox\/android-proof\.sh/);
+  assert.match(workflow, /repair:zerohrs-android-review-proof/);
+  assert.match(
+    workflow,
+    /zerohrs-android-planning-proof-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/,
+  );
+  assert.doesNotMatch(workflow, /ZEROHRS_ANDROID_PROOF_DRY_RUN=1/);
+});
+
 test("ZeroHrs Android review proof publisher plans current-state issue media", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-review-proof-media-"));
   const proofDir = path.join(tmp, "zerohrs-android-proof-1");
@@ -359,6 +412,156 @@ test("ZeroHrs Android proof publisher rejects generic before-after media without
     const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
     assert.equal(report.status, "failed");
     assert.match(String(report.reason), /captures\.before\.issue_reproduced/);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("ZeroHrs Android proof publisher accepts legacy completed media without prose evidence", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-proof-media-legacy-"));
+  const fakeBin = path.join(tmp, "bin");
+  const jobPath = path.join(tmp, "job.md");
+  const runDir = path.join(tmp, "run");
+  const resultPath = path.join(runDir, "result.json");
+  const reportPath = path.join(runDir, "zerohrs-android-proof-report.json");
+  const proofDir = path.join(runDir, "zerohrs-android-proof", "executor");
+
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.mkdirSync(proofDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBin, "gh"),
+    [
+      "#!/usr/bin/env node",
+      "const args = process.argv.slice(2);",
+      "if (args[0] === 'pr' && args[1] === 'view' && args[2] === '272') {",
+      "  process.stdout.write(JSON.stringify({",
+      "    number: 272,",
+      "    url: 'https://github.com/ZeroHrs-Org/zerohrs-app/pull/272',",
+      "    title: 'Add Android proof media',",
+      "    headRefName: 'clawsweeper/issue-zerohrs-org-zerohrs-app-271',",
+      "    headRefOid: '66525b903309a706545d7c074150cf73728845f6',",
+      "    baseRefName: 'main',",
+      "  }));",
+      "  process.exit(0);",
+      "}",
+      "process.stderr.write(`unexpected gh args: ${args.join(' ')}\\n`);",
+      "process.exit(1);",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(jobPath, zeroHrsIssueImplementationJob());
+  fs.writeFileSync(
+    resultPath,
+    JSON.stringify(
+      {
+        repo: "ZeroHrs-Org/zerohrs-app",
+        cluster_id: "issue-zerohrs-org-zerohrs-app-271",
+        mode: "autonomous",
+        actions: [],
+      },
+      null,
+      2,
+    ),
+  );
+  fs.writeFileSync(
+    path.join(runDir, "fix-execution-report.json"),
+    JSON.stringify(
+      {
+        actions: [
+          {
+            action: "open_fix_pr",
+            status: "opened",
+            pr_url: "https://github.com/ZeroHrs-Org/zerohrs-app/pull/272",
+            branch: "clawsweeper/issue-zerohrs-org-zerohrs-app-271",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+  for (const name of [
+    "command.log",
+    "emulator.log",
+    "app.log",
+    "before-loading.png",
+    "after-loading.png",
+    "before.mp4",
+    "after.mp4",
+    "before.png",
+    "after.png",
+  ]) {
+    fs.writeFileSync(path.join(proofDir, name), `${name}\n`);
+  }
+  fs.writeFileSync(
+    path.join(proofDir, "proof-manifest.json"),
+    JSON.stringify(
+      {
+        status: "completed",
+        reproduction_route: "Account tab > Plans",
+        before_ref: "base-main-sha",
+        after_ref: "fix-pr-sha",
+        captures: {
+          before: {
+            route: "Account tab > Plans",
+            ref: "base-main-sha",
+            launcher_screen_detected: false,
+            loading_screenshot: "before-loading.png",
+            screenshot: "before.png",
+            recording: "before.mp4",
+            issue_reproduced: true,
+          },
+          after: {
+            route: "Account tab > Plans",
+            ref: "fix-pr-sha",
+            launcher_screen_detected: false,
+            loading_screenshot: "after-loading.png",
+            screenshot: "after.png",
+            recording: "after.mp4",
+            issue_reproduced: false,
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  try {
+    execFileSync(
+      process.execPath,
+      ["dist/repair/zerohrs-android-proof-media.js", jobPath, resultPath, "--dry-run"],
+      {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          CLAWSWEEPER_ALLOWED_OWNER: "ZeroHrs-Org",
+          GITHUB_RUN_ID: "28504191806",
+          GITHUB_RUN_ATTEMPT: "1",
+          PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
+        },
+        stdio: "pipe",
+      },
+    );
+
+    const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+    assert.equal(report.status, "planned");
+    assert.equal(report.actions[0].status, "planned");
+    assert.deepEqual(
+      report.actions[0].files.map((file: { name: string }) => file.name),
+      [
+        "proof-manifest.json",
+        "command.log",
+        "emulator.log",
+        "app.log",
+        "before-loading.png",
+        "after-loading.png",
+        "before.mp4",
+        "after.mp4",
+        "before.png",
+        "after.png",
+      ],
+    );
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

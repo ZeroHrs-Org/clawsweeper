@@ -191,6 +191,55 @@ jobs:
         with:
           build-script: build:repair
 
+      - name: Resolve ZeroHrs Android planning proof target
+        id: zerohrs_review_proof_target
+        if: ${{ steps.check_job.outputs.job_exists == '1' }}
+        env:
+          JOB_PATH: ${{ inputs.job }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' > "$RUNNER_TEMP/zerohrs-review-proof-target.env"
+          import { parseJob } from "./dist/repair/lib.js";
+
+          const job = parseJob(process.env.JOB_PATH);
+          const frontmatter = job.frontmatter ?? {};
+          const repo = String(frontmatter.repo ?? frontmatter.source_issue_repo ?? "").trim();
+          const normalizedRepo = repo.toLowerCase();
+          const sourceIssueNumber = Number(frontmatter.source_issue_number);
+          const fallbackRef = Array.isArray(frontmatter.canonical) ? frontmatter.canonical[0] : "";
+          const fallbackIssueNumber = Number(String(fallbackRef ?? "").replace(/^#/, ""));
+          const itemNumber = Number.isInteger(sourceIssueNumber) && sourceIssueNumber > 0
+            ? sourceIssueNumber
+            : fallbackIssueNumber;
+          const [owner, name] = repo.split("/");
+          const shouldRun = normalizedRepo === "zerohrs-org/zerohrs-app" && Number.isInteger(itemNumber) && itemNumber > 0;
+          const output = {
+            should_run: shouldRun ? "1" : "0",
+            target_repo: repo,
+            target_repo_owner: owner ?? "",
+            target_repo_name: name ?? "",
+            item_number: shouldRun ? String(itemNumber) : "",
+            target_checkout_dir: "zerohrs-review-target",
+          };
+          for (const [key, value] of Object.entries(output)) {
+            console.log(`${key}=${String(value).replaceAll("\n", " ")}`);
+          }
+          NODE
+          cat "$RUNNER_TEMP/zerohrs-review-proof-target.env" >> "$GITHUB_OUTPUT"
+
+      - name: Create ZeroHrs Android planning proof token
+        id: zerohrs_review_proof_token
+        if: ${{ steps.zerohrs_review_proof_target.outputs.should_run == '1' && env.CLAWSWEEPER_APP_PRIVATE_KEY_PRESENT == '1' }}
+        continue-on-error: true
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ env.CLAWSWEEPER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
+          owner: ${{ steps.zerohrs_review_proof_target.outputs.target_repo_owner }}
+          repositories: ${{ steps.zerohrs_review_proof_target.outputs.target_repo_name }}
+          permission-contents: write
+          permission-issues: write
+
       - uses: ./.github/actions/setup-codex
         if: ${{ steps.check_job.outputs.job_exists == '1' }}
         env:
@@ -199,6 +248,16 @@ jobs:
         with:
           auth-mode: auth-json
           codex-home: ${{ steps.codex_session.outputs.codex_home }}
+
+      - name: Checkout ZeroHrs target for Android planning proof
+        if: ${{ steps.zerohrs_review_proof_target.outputs.should_run == '1' }}
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ steps.zerohrs_review_proof_target.outputs.target_repo }}
+          ref: main
+          path: ${{ steps.zerohrs_review_proof_target.outputs.target_checkout_dir }}
+          fetch-depth: 1
+          token: ${{ steps.zerohrs_review_proof_token.outputs.token || steps.app_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
 
       - name: Prepare ZeroHrs Crabbox proof environment
         if: ${{ steps.check_job.outputs.job_exists == '1' && contains(inputs.job, 'zerohrs-app') }}
@@ -273,6 +332,159 @@ jobs:
             install -m 0755 "$crabbox_bin" "$HOME/.local/bin/crabbox"
             rm -rf "$tmpdir"
           fi
+
+      - name: Run ZeroHrs Android issue planning evidence
+        if: ${{ steps.zerohrs_review_proof_target.outputs.should_run == '1' }}
+        id: zerohrs_planning_android_proof
+        continue-on-error: true
+        timeout-minutes: 75
+        env:
+          GH_TOKEN: ${{ steps.zerohrs_review_proof_token.outputs.token || steps.app_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
+          TARGET_REPO: ${{ steps.zerohrs_review_proof_target.outputs.target_repo }}
+          TARGET_DIR: ${{ steps.zerohrs_review_proof_target.outputs.target_checkout_dir }}
+          ITEM_NUMBER: ${{ steps.zerohrs_review_proof_target.outputs.item_number }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          target_abs="$GITHUB_WORKSPACE/$TARGET_DIR"
+          proof_dir="$target_abs/reports/crabbox-android"
+          mkdir -p "$proof_dir"
+
+          write_proof_prompt_env() {
+            {
+              echo "ZEROHRS_ANDROID_PROOF_PROMPT<<EOF"
+              echo "ZeroHrs Android Crabbox review evidence was run before this planning review for $TARGET_REPO#$ITEM_NUMBER."
+              echo "Inspect these target checkout artifacts before deciding: reports/crabbox-android/proof-manifest.json, command.log, emulator.log, app.log, before-loading.png, before.mp4, and before.png."
+              echo "Mention the ClawSweeper workflow artifact named zerohrs-android-planning-proof-${{ github.run_id }}-${{ github.run_attempt }} and run URL $RUN_URL in the evidence or plan when relevant."
+              echo "Planning/review evidence is current-state reproduction evidence only; there is no after-fix proof yet. The plan/review comment must include or link the current-state Android screenshot(s) and MP4 recording(s) captured after manually navigating the real app UI. Do not treat Android launcher, generic start-page screenshots, product proof routes, proof-route env flags, or tests whose only purpose is proof navigation as sufficient. If the captured media does not show the issue-specific route or visible reported state, mark proof blocked in the plan/review and name the exact manual navigation or local seed step needed next."
+              echo "For implementation PRs, the executor coding agent must decide the issue-specific reproduction path and capture before evidence from main plus after evidence from the fixed branch under reports/clawsweeper/android-proof. When reproduction needs account or app state, seed/mock local dev database rows and document the seed instead of using production data."
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+          }
+
+          write_local_proof_manifest() {
+            local status="$1"
+            local reason="$2"
+            cat > "$proof_dir/proof-manifest.json" <<JSON
+          {
+            "status": "$status",
+            "reason": "$reason",
+            "run_url": "$RUN_URL",
+            "item_number": "$ITEM_NUMBER",
+            "artifacts": [
+              "proof-manifest.json",
+              "command.log",
+              "emulator.log",
+              "app.log",
+              "before-loading.png",
+              "before.mp4",
+              "before.png"
+            ]
+          }
+          JSON
+          }
+
+          ensure_local_proof_artifacts() {
+            missing=0
+            for artifact in before-loading.png before.png before.mp4; do
+              if [ ! -f "$proof_dir/$artifact" ]; then
+                missing=1
+              fi
+            done
+            if [ "$missing" = "1" ] && grep -q '"status": "completed"' "$proof_dir/proof-manifest.json" 2>/dev/null; then
+              write_local_proof_manifest "failed" "Android proof did not produce required loading screenshot and recording artifacts"
+            fi
+          }
+
+          exclude_android_proof_artifacts() {
+            mkdir -p "$target_abs/.git/info"
+            {
+              echo ".crabbox/runs/"
+              echo "reports/crabbox-android/"
+            } >> "$target_abs/.git/info/exclude"
+          }
+
+          write_proof_prompt_env
+          exclude_android_proof_artifacts
+
+          labels="$(gh issue view "$ITEM_NUMBER" --repo "$TARGET_REPO" --json labels --jq '.labels[].name' || true)"
+          if ! printf '%s\n' "$labels" | grep -Fxq "feedback"; then
+            echo "Skipping Android planning proof because $TARGET_REPO#$ITEM_NUMBER is not labeled feedback."
+            exit 0
+          fi
+
+          proof_host="${CRABBOX_STATIC_HOST:-${HETZNER_IPV4:-}}"
+          if [ -z "${CRABBOX_SSH_KEY:-}" ] || [ -z "$proof_host" ]; then
+            printf 'missing Hetzner Android proof secrets\n' > "$proof_dir/command.log"
+            printf 'not started\n' > "$proof_dir/emulator.log"
+            printf 'not started\n' > "$proof_dir/app.log"
+            write_local_proof_manifest "blocked" "missing Hetzner Android proof secrets"
+            exit 0
+          fi
+
+          (
+            cd "$target_abs"
+            mkdir -p reports/crabbox-android
+            if ! crabbox run \
+              --reclaim \
+              --provider ssh \
+              --target linux \
+              --static-host "$proof_host" \
+              --static-user crabbox \
+              --static-port 22 \
+              --static-work-root /work/crabbox \
+              --no-hydrate \
+              --label "ZeroHrs Android issue planning evidence for #$ITEM_NUMBER" \
+              --artifact-glob "reports/crabbox-android/**" \
+              --require-artifact "reports/crabbox-android/proof-manifest.json" \
+              --require-artifact "reports/crabbox-android/command.log" \
+              --require-artifact "reports/crabbox-android/emulator.log" \
+              --require-artifact "reports/crabbox-android/app.log" \
+              --require-artifact "reports/crabbox-android/before-loading.png" \
+              --require-artifact "reports/crabbox-android/before.mp4" \
+              --require-artifact "reports/crabbox-android/before.png" \
+              --download "reports/crabbox-android/proof-manifest.json=reports/crabbox-android/proof-manifest.json" \
+              --download "reports/crabbox-android/command.log=reports/crabbox-android/command.log" \
+              --download "reports/crabbox-android/emulator.log=reports/crabbox-android/emulator.log" \
+              --download "reports/crabbox-android/app.log=reports/crabbox-android/app.log" \
+              --download "reports/crabbox-android/before-loading.png=reports/crabbox-android/before-loading.png" \
+              --download "reports/crabbox-android/before.mp4=reports/crabbox-android/before.mp4" \
+              --download "reports/crabbox-android/before.png=reports/crabbox-android/before.png" \
+              --stop-after never \
+              --shell \
+              -- \
+              "bash scripts/crabbox/android-proof.sh"; then
+              echo "::warning::Android Crabbox planning proof failed; planner will inspect the local failure manifest if artifacts were downloaded."
+              if [ ! -f reports/crabbox-android/proof-manifest.json ]; then
+                write_local_proof_manifest "failed" "crabbox run failed before proof artifacts were downloaded"
+                printf 'crabbox run failed before proof artifacts were downloaded\n' > reports/crabbox-android/command.log
+                printf 'not downloaded\n' > reports/crabbox-android/emulator.log
+                printf 'not downloaded\n' > reports/crabbox-android/app.log
+              fi
+            fi
+            ensure_local_proof_artifacts
+          )
+
+      - name: Publish ZeroHrs Android issue planning proof media
+        if: ${{ steps.zerohrs_review_proof_target.outputs.should_run == '1' && (steps.zerohrs_review_proof_token.outputs.token != '' || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN != '') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.zerohrs_review_proof_token.outputs.token || env.ZEROHRS_CLAWSWEEPER_GITHUB_TOKEN || github.token }}
+          ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE: ${{ secrets.ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE }}
+        run: |
+          mkdir -p .clawsweeper-repair
+          pnpm run repair:zerohrs-android-review-proof -- \
+            --proof-root "${{ steps.zerohrs_review_proof_target.outputs.target_checkout_dir }}/reports/crabbox-android" \
+            --report .clawsweeper-repair/zerohrs-android-review-proof-report.json
+
+      - name: Upload ZeroHrs Android issue planning proof media
+        if: ${{ always() && steps.zerohrs_review_proof_target.outputs.should_run == '1' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: zerohrs-android-planning-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.zerohrs_review_proof_target.outputs.target_checkout_dir }}/reports/crabbox-android/**
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Restore Codex session
         id: restore_codex_session

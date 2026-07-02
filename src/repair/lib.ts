@@ -287,6 +287,13 @@ export function renderPrompt(
     );
   }
 
+  if (context.zeroHrsAndroidProofPrompt) {
+    parts.push(
+      "## ZeroHrs Android proof evidence",
+      String(context.zeroHrsAndroidProofPrompt).trim(),
+    );
+  }
+
   parts.push(
     "## Required final output",
     "Return JSON matching `schema/repair/codex-result.schema.json` and nothing else.",

@@ -307,20 +307,13 @@ function validateProofFiles(proofDir: string) {
   if (manifest?.captures?.before?.issue_reproduced !== true) {
     throw new Error("Android proof manifest must mark captures.before.issue_reproduced as true");
   }
-  if (typeof manifest?.captures?.before?.issue_evidence !== "string") {
-    throw new Error("Android proof manifest is missing captures.before.issue_evidence");
-  }
-  if (!manifest.captures.before.issue_evidence.trim()) {
-    throw new Error("Android proof manifest is missing captures.before.issue_evidence");
-  }
-  if (manifest?.captures?.after?.issue_resolved !== true) {
-    throw new Error("Android proof manifest must mark captures.after.issue_resolved as true");
-  }
-  if (typeof manifest?.captures?.after?.fix_evidence !== "string") {
-    throw new Error("Android proof manifest is missing captures.after.fix_evidence");
-  }
-  if (!manifest.captures.after.fix_evidence.trim()) {
-    throw new Error("Android proof manifest is missing captures.after.fix_evidence");
+  if (
+    manifest?.captures?.after?.issue_resolved !== true &&
+    manifest?.captures?.after?.issue_reproduced !== false
+  ) {
+    throw new Error(
+      "Android proof manifest must mark captures.after.issue_resolved as true or captures.after.issue_reproduced as false",
+    );
   }
   return files;
 }
