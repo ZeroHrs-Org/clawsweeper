@@ -242,6 +242,81 @@ test("issue implementation post-flight waits for checks to be created", () => {
   }
 });
 
+test("issue implementation post-flight blocks cleanly when status checks are inaccessible", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawsweeper-post-flight-"));
+  const fakeBin = path.join(tmp, "bin");
+  const jobPath = path.join(tmp, "job.md");
+  const runDir = path.join(tmp, "run");
+  const resultPath = path.join(runDir, "result.json");
+  const reportPath = path.join(runDir, "post-flight-report.json");
+  const viewCountPath = path.join(tmp, "view-count.txt");
+
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.mkdirSync(runDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBin, "gh"),
+    [
+      "#!/usr/bin/env node",
+      "const fs = require('node:fs');",
+      "const args = process.argv.slice(2);",
+      "if (args[0] === 'api' && args[1] === 'repos/openclaw/openclaw/pulls/123') {",
+      "  process.stdout.write(JSON.stringify({",
+      "    number: 123, state: 'open', title: 'fix(ui): preserve source config',",
+      "    draft: false, labels: [], base: { ref: 'main' }, merged_at: null,",
+      "    head: { sha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },",
+      "  }));",
+      "  process.exit(0);",
+      "}",
+      "if (args[0] === 'pr' && args[1] === 'view') {",
+      "  const countPath = process.env.FAKE_GH_VIEW_COUNT_FILE;",
+      "  const count = fs.existsSync(countPath) ? Number(fs.readFileSync(countPath, 'utf8')) : 0;",
+      "  fs.writeFileSync(countPath, String(count + 1));",
+      "  const jsonFields = args[args.indexOf('--json') + 1] || '';",
+      "  if (jsonFields.includes('statusCheckRollup')) {",
+      "    process.stderr.write('GraphQL: Resource not accessible by integration (repository.pullRequest.statusCheckRollup.nodes.0.commit.statusCheckRollup)\\n');",
+      "    process.exit(1);",
+      "  }",
+      "  process.stdout.write(JSON.stringify({",
+      "    baseRefName: 'main', isDraft: false, mergeable: 'MERGEABLE',",
+      "    mergeStateStatus: 'CLEAN', reviewDecision: null, state: 'OPEN',",
+      "    title: 'fix(ui): preserve source config',",
+      "    url: 'https://github.com/openclaw/openclaw/pull/123',",
+      "  }));",
+      "  process.exit(0);",
+      "}",
+      "process.stderr.write(`unexpected gh args: ${args.join(' ')}\\n`);",
+      "process.exit(1);",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+
+  writeIssueImplementationJob(jobPath);
+  writeIssueImplementationReports(runDir, resultPath);
+
+  try {
+    execFileSync(process.execPath, ["dist/repair/post-flight.js", jobPath, resultPath], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        CLAWSWEEPER_ALLOW_EXECUTE: "1",
+        CLAWSWEEPER_ALLOWED_OWNER: "openclaw",
+        CLAWSWEEPER_POST_FLIGHT_WAIT_MS: "10000",
+        CLAWSWEEPER_POST_FLIGHT_POLL_MS: "1",
+        FAKE_GH_VIEW_COUNT_FILE: viewCountPath,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+      stdio: "pipe",
+    });
+
+    const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+    assert.equal(report.actions[0]?.status, "blocked");
+    assert.match(String(report.actions[0]?.reason), /^status checks unavailable to token:/);
+    assert.equal(fs.readFileSync(viewCountPath, "utf8"), "2");
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test("merge post-flight waits when only ignored checks exist", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawsweeper-post-flight-"));
   const fakeBin = path.join(tmp, "bin");

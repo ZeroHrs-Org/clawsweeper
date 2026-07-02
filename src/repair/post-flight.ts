@@ -292,7 +292,7 @@ function finalizeIssueImplementationPr({ base, parsed }: LooseRecord) {
       };
     }
 
-    const checkBlock = validateStatusChecks(view.statusCheckRollup ?? []);
+    const checkBlock = validatePullRequestViewStatusChecks(view);
     if (!checkBlock) {
       return {
         ...prBase,
@@ -515,9 +515,7 @@ function validateMergeableFixPr({ pull, view, preflight }: LooseRecord) {
   const threadBlock = validateResolvedReviewThreads(result.repo, pull.number);
   if (threadBlock) return threadBlock;
 
-  const checkBlock = shouldRequirePrChecks()
-    ? validateStatusChecks(view.statusCheckRollup ?? [])
-    : "";
+  const checkBlock = shouldRequirePrChecks() ? validatePullRequestViewStatusChecks(view) : "";
   if (checkBlock) return checkBlock;
 
   return "";
@@ -577,6 +575,13 @@ function validateStatusChecks(checks: LooseRecord[]) {
   if (considered === 0) return "no PR checks found";
   if (blockers.length > 0) return `checks are not clean: ${blockers.slice(0, 5).join(", ")}`;
   return "";
+}
+
+function validatePullRequestViewStatusChecks(view: LooseRecord) {
+  if (view.statusCheckRollupUnavailable) {
+    return `status checks unavailable to token: ${view.statusCheckRollupError || "GitHub denied statusCheckRollup"}`;
+  }
+  return validateStatusChecks(view.statusCheckRollup ?? []);
 }
 
 function shouldWaitForMergeReadiness({ mergeBlock, view }: LooseRecord) {
@@ -726,14 +731,8 @@ function fetchIssue(repo: string, number: JsonValue) {
 }
 
 function fetchPullRequestView(repo: string, number: JsonValue) {
-  return ghJson([
-    "pr",
-    "view",
-    String(number),
-    "--repo",
-    repo,
-    "--json",
-    [
+  try {
+    return fetchPullRequestViewFields(repo, number, [
       "baseRefName",
       "isDraft",
       "mergeable",
@@ -746,8 +745,34 @@ function fetchPullRequestView(repo: string, number: JsonValue) {
       "title",
       "updatedAt",
       "url",
-    ].join(","),
-  ]);
+    ]);
+  } catch (error) {
+    const detail = ghErrorText(error);
+    if (!/statusCheckRollup|Resource not accessible by integration/i.test(detail)) throw error;
+    const fallback = fetchPullRequestViewFields(repo, number, [
+      "baseRefName",
+      "isDraft",
+      "mergeable",
+      "mergeCommit",
+      "mergeStateStatus",
+      "mergedAt",
+      "reviewDecision",
+      "state",
+      "title",
+      "updatedAt",
+      "url",
+    ]);
+    return {
+      ...fallback,
+      statusCheckRollup: [],
+      statusCheckRollupUnavailable: true,
+      statusCheckRollupError: compactText(detail, 500),
+    };
+  }
+}
+
+function fetchPullRequestViewFields(repo: string, number: JsonValue, fields: string[]) {
+  return ghJson(["pr", "view", String(number), "--repo", repo, "--json", fields.join(",")]);
 }
 
 function findLatestResultPath() {
