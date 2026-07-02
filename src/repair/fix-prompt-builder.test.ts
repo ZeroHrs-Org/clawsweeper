@@ -163,8 +163,9 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /keep the Codex edit pass narrow/);
   assert.match(
     prompt,
-    /do not spend the edit pass running broad `pnpm run diff:checks` repeatedly/,
+    /do not run `pnpm run dev:mobile:local`, broad `pnpm run diff:checks`, or long-lived stack startup inside the edit pass/,
   );
+  assert.match(prompt, /ClawSweeper runs configured validation after checkpointing the patch/);
   assert.match(prompt, /seed or mock minimal local dev\/test rows/);
   assert.match(prompt, /keep proof artifacts out of the PR diff/);
 });
