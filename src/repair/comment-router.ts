@@ -2064,7 +2064,7 @@ function issueImplementationJobOptions(command: LooseRecord) {
 }
 
 function issueImplementationOverrideReason(command: LooseRecord) {
-  return /^execute\s+plan(?:\s|$)/i.test(String(command.command ?? "").trim())
+  return isExecutePlanIssueImplementationOverride(command)
     ? "maintainer requested Execute Plan"
     : "maintainer requested /clawsweeper build override";
 }
@@ -2072,7 +2072,13 @@ function issueImplementationOverrideReason(command: LooseRecord) {
 function issueImplementationOverrideBlockerClass(command: LooseRecord) {
   if (command.operator_override !== true) return null;
   const target = command.target ?? {};
-  if (target.kind === "issue" && issueImplementationLinkedPrSignal(target)) return "hard";
+  if (
+    target.kind === "issue" &&
+    issueImplementationLinkedPrSignal(target) &&
+    !isExecutePlanIssueImplementationOverride(command)
+  ) {
+    return "hard";
+  }
   if (target.kind === "issue" && target.state && target.state !== "open") return "hard";
   if (target.kind === "issue" && target.locked === true) return "hard";
   const labels = (target.labels ?? []).map((label: JsonValue) => String(label));
@@ -2083,6 +2089,10 @@ function issueImplementationOverrideBlockerClass(command: LooseRecord) {
     return "hard";
   }
   return "soft";
+}
+
+function isExecutePlanIssueImplementationOverride(command: LooseRecord) {
+  return /^execute\s+plan(?:\s|$)/i.test(String(command.command ?? "").trim());
 }
 
 function issueImplementationLinkedPrSignal(target: LooseRecord) {

@@ -666,3 +666,17 @@ test("comment router classifies protected issue build overrides as hard", () => 
   assert.match(source, /overrideBlockerClass,\n\s+overrideAction: command\.operator_override/);
   assert.match(source, /prepare a non-mutating handoff for this issue/);
 });
+
+test("comment router keeps Execute Plan overrides in the fix lane for existing implementation PRs", () => {
+  const source = readFileSync("src/repair/comment-router.ts", "utf8");
+
+  assert.match(source, /isExecutePlanIssueImplementationOverride\(command\)/);
+  assert.match(
+    source,
+    /issueImplementationLinkedPrSignal\(target\) &&\n\s+!isExecutePlanIssueImplementationOverride\(command\)/,
+  );
+  assert.match(
+    source,
+    /return isExecutePlanIssueImplementationOverride\(command\)\n\s+\? "maintainer requested Execute Plan"/,
+  );
+});
