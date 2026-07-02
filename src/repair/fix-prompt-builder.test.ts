@@ -139,8 +139,13 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /before\.mp4/);
   assert.match(prompt, /after-loading\.png/);
   assert.match(prompt, /after\.mp4/);
+  assert.match(prompt, /same-checkout early\/later screenshots/);
   assert.match(prompt, /if Expo Dev Launcher is visible/);
   assert.match(prompt, /launcher_screen_detected: false/);
+  assert.match(prompt, /captures\.before\.issue_reproduced: true/);
+  assert.match(prompt, /captures\.before\.issue_evidence/);
+  assert.match(prompt, /captures\.after\.issue_resolved: true/);
+  assert.match(prompt, /captures\.after\.fix_evidence/);
   assert.match(prompt, /manifest `status` to `blocked`/);
   assert.match(prompt, /keep the Codex edit pass narrow/);
   assert.match(

@@ -3615,6 +3615,12 @@ function zeroHrsIssueProofRequirement({
       reason: `ZeroHrs Android proof manifest is missing before/after refs or branch names.${restoredNote}`,
     };
   }
+  if (beforeRef === afterRef) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest before/after refs must differ.${restoredNote}`,
+    };
+  }
   const beforeLauncher = manifestValueAt(manifest, [
     "captures",
     "before",
@@ -3643,6 +3649,32 @@ function zeroHrsIssueProofRequirement({
         reason: `ZeroHrs Android proof manifest is missing structured before/after media metadata.${restoredNote}`,
       };
     }
+  }
+  if (manifest?.captures?.before?.issue_reproduced !== true) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest must mark captures.before.issue_reproduced as true.${restoredNote}`,
+    };
+  }
+  const beforeEvidence = manifest?.captures?.before?.issue_evidence;
+  if (typeof beforeEvidence !== "string" || !beforeEvidence.trim()) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest is missing captures.before.issue_evidence.${restoredNote}`,
+    };
+  }
+  if (manifest?.captures?.after?.issue_resolved !== true) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest must mark captures.after.issue_resolved as true.${restoredNote}`,
+    };
+  }
+  const afterEvidence = manifest?.captures?.after?.fix_evidence;
+  if (typeof afterEvidence !== "string" || !afterEvidence.trim()) {
+    return {
+      status: "invalid",
+      reason: `ZeroHrs Android proof manifest is missing captures.after.fix_evidence.${restoredNote}`,
+    };
   }
   return { status: "satisfied" };
 }

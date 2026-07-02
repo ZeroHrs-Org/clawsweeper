@@ -270,6 +270,30 @@ function validateProofFiles(proofDir: string) {
   if (manifest.status !== "completed") {
     throw new Error(`Android proof manifest status is ${manifest.status ?? "missing"}`);
   }
+  const beforeRef = firstManifestString(manifest, [
+    ["before_ref"],
+    ["before_sha"],
+    ["before_branch"],
+    ["refs", "before"],
+    ["captures", "before", "ref"],
+    ["captures", "before", "sha"],
+    ["captures", "before", "branch"],
+  ]);
+  const afterRef = firstManifestString(manifest, [
+    ["after_ref"],
+    ["after_sha"],
+    ["after_branch"],
+    ["refs", "after"],
+    ["captures", "after", "ref"],
+    ["captures", "after", "sha"],
+    ["captures", "after", "branch"],
+  ]);
+  if (!beforeRef || !afterRef) {
+    throw new Error("Android proof manifest is missing before/after refs or branch names");
+  }
+  if (beforeRef === afterRef) {
+    throw new Error("Android proof manifest before/after refs must differ");
+  }
   for (const field of [
     manifest?.captures?.before?.loading_screenshot,
     manifest?.captures?.before?.recording,
@@ -280,7 +304,42 @@ function validateProofFiles(proofDir: string) {
       throw new Error("Android proof manifest is missing structured before/after media metadata");
     }
   }
+  if (manifest?.captures?.before?.issue_reproduced !== true) {
+    throw new Error("Android proof manifest must mark captures.before.issue_reproduced as true");
+  }
+  if (typeof manifest?.captures?.before?.issue_evidence !== "string") {
+    throw new Error("Android proof manifest is missing captures.before.issue_evidence");
+  }
+  if (!manifest.captures.before.issue_evidence.trim()) {
+    throw new Error("Android proof manifest is missing captures.before.issue_evidence");
+  }
+  if (manifest?.captures?.after?.issue_resolved !== true) {
+    throw new Error("Android proof manifest must mark captures.after.issue_resolved as true");
+  }
+  if (typeof manifest?.captures?.after?.fix_evidence !== "string") {
+    throw new Error("Android proof manifest is missing captures.after.fix_evidence");
+  }
+  if (!manifest.captures.after.fix_evidence.trim()) {
+    throw new Error("Android proof manifest is missing captures.after.fix_evidence");
+  }
   return files;
+}
+
+function firstManifestString(manifest: LooseRecord, paths: string[][]) {
+  for (const segments of paths) {
+    const value = manifestValueAt(manifest, segments);
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function manifestValueAt(value: JsonValue | undefined, segments: string[]) {
+  let current: JsonValue | undefined = value;
+  for (const segment of segments) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) return undefined;
+    current = (current as LooseRecord)[segment];
+  }
+  return current;
 }
 
 function publishProofAssets({

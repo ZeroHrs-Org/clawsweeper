@@ -56,6 +56,12 @@ test("ZeroHrs feedback profile treats maintainer-authored reports as external fe
   assert.match(profile.promptNote, /ClawSweeper restores them before staging/);
   assert.match(profile.promptNote, /temporary proof driver/);
   assert.match(profile.promptNote, /proof-manifest\.json with structured captures metadata/);
+  assert.match(profile.promptNote, /pre-fix current-main checkout/);
+  assert.match(profile.promptNote, /never same-checkout early\/later screenshots/);
+  assert.match(profile.promptNote, /captures\.before\.issue_reproduced=true/);
+  assert.match(profile.promptNote, /captures\.before\.issue_evidence/);
+  assert.match(profile.promptNote, /captures\.after\.issue_resolved=true/);
+  assert.match(profile.promptNote, /captures\.after\.fix_evidence/);
   assert.match(profile.promptNote, /before-loading\.png/);
   assert.match(profile.promptNote, /before\.mp4/);
   assert.match(profile.promptNote, /seed or mock data in the local dev\/test database/);

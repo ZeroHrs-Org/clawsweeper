@@ -251,8 +251,13 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
     source,
     /ZeroHrs Android proof manifest is missing before\/after refs or branch names/,
   );
+  assert.match(source, /ZeroHrs Android proof manifest before\/after refs must differ/);
   assert.match(source, /launcher_screen_detected as false/);
   assert.match(source, /captures\?\.before\?\.loading_screenshot/);
+  assert.match(source, /captures\.before\.issue_reproduced/);
+  assert.match(source, /captures\.before\.issue_evidence/);
+  assert.match(source, /captures\.after\.issue_resolved/);
+  assert.match(source, /captures\.after\.fix_evidence/);
   assert.match(source, /scripts\/crabbox\/android-proof\.sh/);
   assert.match(source, /scripts\/crabbox\/bootstrap-hetzner-android-runner\.sh/);
   assert.match(source, /scripts\/crabbox\/run-android-proof\.sh/);
