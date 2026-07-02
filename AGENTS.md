@@ -70,11 +70,13 @@ not split reports into issue/PR subtrees.
 - Execution proof must include before and after Android media from the real app
   path: `before-loading.png`, `before.mp4`, `after-loading.png`, and
   `after.mp4`, plus the manifest and logs. The executor agent owns the
-  issue-specific navigation and may use a temporary proof driver or local
-  seed/mock data, but must not add product routes, screens, app navigation
+  issue-specific navigation and may use a temporary proof driver, local
+  admin/referral codes, local trial or plan state, or seed/mock data to reach
+  the reported screen, but must not add product routes, screens, app navigation
   plumbing, `zeroHrsProofRoute`/`proofRoute`, `EXPO_PUBLIC_*PROOF*`,
   `Constants.expoConfig` proof wiring, or tests whose only purpose is proof
-  navigation to the target PR diff.
+  navigation to the target PR diff. Document any code creation or seed command
+  in the proof manifest and command log.
 - Keep proof media out of committed target-repo diffs. Store publishable proof
   artifacts under `reports/clawsweeper/android-proof` for repair execution or
   under the review proof artifact directory for planning/review.

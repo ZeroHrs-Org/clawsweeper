@@ -121,15 +121,20 @@ test("ZeroHrs Android proof workflow runs before issue implementation post-fligh
   const workflow = fs.readFileSync(".github/workflows/repair-cluster-worker.yml", "utf8");
   const executeIndex = workflow.indexOf("name: Execute credited fix artifact");
   const proofIndex = workflow.indexOf("name: Publish ZeroHrs Android proof media");
+  const recoverIndex = workflow.indexOf("name: Recover remote ZeroHrs Android proof media");
   const uploadIndex = workflow.indexOf("name: Upload ZeroHrs Android proof media");
   const postFlightIndex = workflow.indexOf("name: Post-flight finalize fix PRs");
 
   assert.notEqual(executeIndex, -1);
   assert.notEqual(proofIndex, -1);
+  assert.notEqual(recoverIndex, -1);
   assert.notEqual(uploadIndex, -1);
   assert.notEqual(postFlightIndex, -1);
   assert.ok(
-    executeIndex < proofIndex && proofIndex < uploadIndex && uploadIndex < postFlightIndex,
+    executeIndex < proofIndex &&
+      proofIndex < recoverIndex &&
+      recoverIndex < uploadIndex &&
+      uploadIndex < postFlightIndex,
     "proof media must be generated and uploaded before post-flight can mark the PR ready",
   );
   assert.match(
@@ -139,6 +144,14 @@ test("ZeroHrs Android proof workflow runs before issue implementation post-fligh
   assert.match(
     workflow,
     /ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE: \$\{\{ secrets\.ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE \}\}/,
+  );
+  assert.match(
+    workflow,
+    /find "\$work_root" -path '\*\/zerohrs-app\/reports\/clawsweeper\/android-proof\/command\.log'/,
+  );
+  assert.match(
+    workflow,
+    /remote-zerohrs-android-proof-\$\{GITHUB_RUN_ID\}-\$\{GITHUB_RUN_ATTEMPT\}/,
   );
   assert.match(workflow, /path: \.clawsweeper-repair\/runs\/\*\*\/zerohrs-android-proof\/\*\*/);
 });

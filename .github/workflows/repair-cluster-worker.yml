@@ -357,7 +357,7 @@ jobs:
               echo "Inspect these target checkout artifacts before deciding: reports/crabbox-android/proof-manifest.json, command.log, emulator.log, app.log, before-loading.png, before.mp4, and before.png."
               echo "Mention the ClawSweeper workflow artifact named zerohrs-android-planning-proof-${{ github.run_id }}-${{ github.run_attempt }} and run URL $RUN_URL in the evidence or plan when relevant."
               echo "Planning/review evidence is current-state reproduction evidence only; there is no after-fix proof yet. The plan/review comment must include or link the current-state Android screenshot(s) and MP4 recording(s) captured after manually navigating the real app UI. Do not treat Android launcher, generic start-page screenshots, product proof routes, proof-route env flags, or tests whose only purpose is proof navigation as sufficient. If the captured media does not show the issue-specific route or visible reported state, mark proof blocked in the plan/review and name the exact manual navigation or local seed step needed next."
-              echo "For implementation PRs, the executor coding agent must decide the issue-specific reproduction path and capture before evidence from main plus after evidence from the fixed branch under reports/clawsweeper/android-proof. When reproduction needs account or app state, seed/mock local dev database rows and document the seed instead of using production data."
+              echo "For implementation PRs, the executor coding agent must decide the issue-specific reproduction path and capture before evidence from main plus after evidence from the fixed branch under reports/clawsweeper/android-proof. When reproduction needs account, app, billing, referral, entitlement, or plan state, create/use local admin or referral codes, activate local trial/plan state, or seed/mock local dev database rows; document the commands and seeded state instead of using production data."
               echo "EOF"
             } >> "$GITHUB_ENV"
           }
@@ -986,6 +986,75 @@ jobs:
           CLAWSWEEPER_ALLOWED_OWNER: ${{ steps.target.outputs.target_owner }}
           ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE: ${{ secrets.ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE }}
         run: pnpm run repair:zerohrs-android-proof -- "${{ inputs.job }}" --latest
+
+      - name: Recover remote ZeroHrs Android proof media
+        if: ${{ always() && steps.check_job.outputs.job_exists == '1' && contains(inputs.job, 'zerohrs-app') }}
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          proof_host="${CRABBOX_STATIC_HOST:-${ZEROHRS_CRABBOX_STATIC_HOST:-${HETZNER_IPV6:-${HETZNER_IPV4:-}}}}"
+          static_user="${CRABBOX_STATIC_USER:-crabbox}"
+          static_port="${CRABBOX_STATIC_PORT:-22}"
+          work_root="${CRABBOX_STATIC_WORK_ROOT:-/work/crabbox}"
+          key_path="${CRABBOX_SSH_KEY:-}"
+          known_hosts="${HOME}/.ssh/known_hosts"
+
+          if [ -z "$proof_host" ] || [ -z "$key_path" ] || [ ! -f "$key_path" ]; then
+            echo "ZeroHrs remote proof recovery skipped; static host or SSH key is unavailable."
+            exit 0
+          fi
+
+          ssh_opts=(
+            -i "$key_path"
+            -o IdentitiesOnly=yes
+            -o BatchMode=yes
+            -o ConnectTimeout=10
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=2
+            -p "$static_port"
+            -o StrictHostKeyChecking=yes
+          )
+          if [ -f "$known_hosts" ]; then
+            ssh_opts+=(-o "UserKnownHostsFile=$known_hosts")
+          fi
+
+          remote_tar="${RUNNER_TEMP}/zerohrs-android-proof-remote.tgz"
+          recover_dir=".clawsweeper-repair/runs/remote-zerohrs-android-proof-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/zerohrs-android-proof/remote"
+          rm -f "$remote_tar"
+          rm -rf "$recover_dir"
+          mkdir -p "$recover_dir"
+
+          if ! ssh "${ssh_opts[@]}" "${static_user}@${proof_host}" bash -s -- "$work_root" >"$remote_tar" <<'REMOTE'
+          set -euo pipefail
+          work_root="$1"
+          proof_dir="$(
+            find "$work_root" -path '*/zerohrs-app/reports/clawsweeper/android-proof/command.log' -type f -printf '%T@ %h\n' 2>/dev/null |
+              sort -nr |
+              head -n 1 |
+              cut -d' ' -f2-
+          )"
+          if [ -z "$proof_dir" ]; then
+            exit 2
+          fi
+          tar -C "$proof_dir" -czf - .
+          REMOTE
+          then
+            echo "ZeroHrs remote proof recovery found no remote proof directory."
+            rm -f "$remote_tar"
+            exit 0
+          fi
+
+          if [ ! -s "$remote_tar" ]; then
+            echo "ZeroHrs remote proof recovery produced an empty archive."
+            rm -f "$remote_tar"
+            exit 0
+          fi
+
+          tar -xzf "$remote_tar" -C "$recover_dir"
+          echo "Recovered remote ZeroHrs Android proof artifacts:"
+          find "$recover_dir" -maxdepth 1 -type f -printf '%f\n' | sort
 
       - name: Upload ZeroHrs Android proof media
         if: ${{ always() && steps.check_job.outputs.job_exists == '1' && contains(inputs.job, 'zerohrs-app') }}
