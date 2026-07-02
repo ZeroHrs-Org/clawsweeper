@@ -143,6 +143,92 @@ test("ZeroHrs Android proof workflow runs before issue implementation post-fligh
   assert.match(workflow, /path: \.clawsweeper-repair\/runs\/\*\*\/zerohrs-android-proof\/\*\*/);
 });
 
+test("ZeroHrs Android review proof publisher plans current-state issue media", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-review-proof-media-"));
+  const proofDir = path.join(tmp, "zerohrs-android-proof-1");
+  const reportPath = path.join(tmp, "review-proof-report.json");
+  fs.mkdirSync(proofDir, { recursive: true });
+  for (const name of [
+    "command.log",
+    "emulator.log",
+    "app.log",
+    "before-loading.png",
+    "before.mp4",
+    "before.png",
+  ]) {
+    fs.writeFileSync(path.join(proofDir, name), `${name}\n`);
+  }
+  fs.writeFileSync(
+    path.join(proofDir, "proof-manifest.json"),
+    JSON.stringify(
+      {
+        status: "completed",
+        item_number: 274,
+        reproduction_route: "Account tab > Plans",
+        captures: {
+          before: {
+            route: "Account tab > Plans",
+            launcher_screen_detected: false,
+            loading_screenshot: "before-loading.png",
+            screenshot: "before.png",
+            recording: "before.mp4",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        "dist/repair/zerohrs-android-review-proof-media.js",
+        "--proof-root",
+        tmp,
+        "--report",
+        reportPath,
+        "--dry-run",
+      ],
+      {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          GITHUB_RUN_ID: "28504191806",
+          GITHUB_RUN_ATTEMPT: "2",
+          GITHUB_SHA: "0b05eb93a12b9f3c15985766a6e7ff09571d24cb",
+        },
+        stdio: "pipe",
+      },
+    );
+
+    const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+    assert.equal(report.status, "planned");
+    assert.equal(report.actions[0].action, "zerohrs_android_review_proof");
+    assert.equal(report.actions[0].status, "planned");
+    assert.equal(report.actions[0].issue, "#274");
+    assert.match(
+      report.actions[0].asset_prefix,
+      /^proof-media\/issue-274\/review-run-28504191806-attempt-2-0b05eb93a12b$/,
+    );
+    assert.deepEqual(
+      report.actions[0].files.map((file: { name: string }) => file.name),
+      [
+        "proof-manifest.json",
+        "command.log",
+        "emulator.log",
+        "app.log",
+        "before-loading.png",
+        "before.mp4",
+        "before.png",
+      ],
+    );
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test("ZeroHrs Android proof publisher rejects generic before-after media without issue assertions", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-proof-media-invalid-"));
   const fakeBin = path.join(tmp, "bin");

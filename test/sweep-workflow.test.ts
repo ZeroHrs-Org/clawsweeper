@@ -79,8 +79,13 @@ test("publish workflow installs Codex from the root checkout path", () => {
 
 test("ZeroHrs exact feedback dispatch runs Android proof and syncs a review comment", () => {
   const workflow = readFileSync(".github/workflows/sweep.yml", "utf8");
+  const eventJobStart = workflow.indexOf("\n  event-review-apply:");
   const reviewJobStart = workflow.indexOf("\n  review:");
   const publishJobStart = workflow.indexOf("\n  publish:", reviewJobStart);
+  const eventJob = workflow.slice(
+    eventJobStart,
+    workflow.indexOf("\n  target-fanout:", eventJobStart),
+  );
   const reviewJob = workflow.slice(reviewJobStart, publishJobStart);
   const publishJob = workflow.slice(
     publishJobStart,
@@ -90,6 +95,21 @@ test("ZeroHrs exact feedback dispatch runs Android proof and syncs a review comm
   assert.match(
     workflow,
     /CLAWSWEEPER_COMMENT_AUTHOR_LOGIN: \$\{\{ vars\.CLAWSWEEPER_COMMENT_AUTHOR_LOGIN \|\| 'zebriot' \}\}/,
+  );
+  assert.match(eventJob, /- name: Run ZeroHrs Android feedback review evidence/);
+  assert.match(eventJob, /steps\.target\.outputs\.target_repo == 'ZeroHrs-Org\/zerohrs-app'/);
+  assert.match(eventJob, /id: zerohrs-event-android-proof/);
+  assert.match(
+    eventJob,
+    /crabbox run[\s\S]*--provider ssh[\s\S]*--static-host "\$HETZNER_IPV4"[\s\S]*bash scripts\/crabbox\/android-proof\.sh/,
+  );
+  assert.match(eventJob, /combined_prompt="\$ADDITIONAL_PROMPT"/);
+  assert.match(eventJob, /ZEROHRS_ANDROID_PROOF_PROMPT/);
+  assert.match(eventJob, /name: Publish ZeroHrs Android event review proof media/);
+  assert.match(eventJob, /repair:zerohrs-android-review-proof/);
+  assert.match(
+    eventJob,
+    /--proof-root "\$\{\{ steps\.target\.outputs\.target_checkout_dir \}\}\/reports\/crabbox-android"/,
   );
   assert.match(reviewJob, /- name: Run ZeroHrs Android feedback review evidence/);
   assert.match(reviewJob, /needs\.plan\.outputs\.target_repo == 'ZeroHrs-Org\/zerohrs-app'/);
@@ -111,9 +131,19 @@ test("ZeroHrs exact feedback dispatch runs Android proof and syncs a review comm
   assert.match(reviewJob, /reports\/crabbox-android\//);
   assert.match(reviewJob, /\$target_abs\/\.git\/info\/exclude/);
   assert.match(reviewJob, /name: zerohrs-android-proof-\$\{\{ matrix\.shard \}\}/);
+  assert.doesNotMatch(reviewJob, /write_placeholder_png/);
+  assert.doesNotMatch(reviewJob, /write_placeholder_mp4/);
+  assert.doesNotMatch(reviewJob, /write_placeholder_proof_artifacts/);
   assert.match(
     publishJob,
     /github\.event\.action != 'clawsweeper_target_sweep' \|\| github\.event\.client_payload\.item_number != ''/,
+  );
+  assert.match(publishJob, /pattern: zerohrs-android-proof-\*/);
+  assert.match(publishJob, /name: Publish ZeroHrs Android review proof media/);
+  assert.match(publishJob, /repair:zerohrs-android-review-proof/);
+  assert.match(
+    publishJob,
+    /ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE: \$\{\{ secrets\.ZEROHRS_GITHUB_USER_ATTACHMENT_COOKIE \}\}/,
   );
 });
 
