@@ -46,7 +46,7 @@ const resultRepairTimeoutMs = Number(
 );
 const codexReasoningEffort = repairCodexReasoningEffort();
 const codexServiceTier = repairCodexServiceTier();
-const codexPlannerSandbox =
+const requestedCodexPlannerSandbox =
   process.env.CLAWSWEEPER_CODEX_PLANNER_SANDBOX === "danger-full-access"
     ? "danger-full-access"
     : "read-only";
@@ -94,6 +94,7 @@ if (targetCheckout) {
   process.env.CLAWSWEEPER_TARGET_CHECKOUT = targetCheckout;
   promptContext.targetCheckout = targetCheckout;
 }
+const codexPlannerSandbox = resolveCodexPlannerSandbox();
 const zeroHrsAndroidProofPrompt = String(process.env.ZEROHRS_ANDROID_PROOF_PROMPT ?? "").trim();
 if (zeroHrsAndroidProofPrompt) {
   promptContext.zeroHrsAndroidProofPrompt = zeroHrsAndroidProofPrompt;
@@ -339,6 +340,25 @@ function spawnCodexWithHeartbeat({
 
 function codexWorkspaceRoot(): string {
   return targetCheckout || repoRoot();
+}
+
+function resolveCodexPlannerSandbox() {
+  if (requestedCodexPlannerSandbox === "danger-full-access") return "danger-full-access";
+
+  const repo = String(job.frontmatter.repo ?? "").toLowerCase();
+  const zeroHrsImplementation =
+    repo === "zerohrs-org/zerohrs-app" &&
+    (mode === "execute" || mode === "autonomous") &&
+    job.frontmatter.allow_fix_pr === true &&
+    process.env.CLAWSWEEPER_ALLOW_FIX_PR === "1";
+  if (zeroHrsImplementation && process.env.GITHUB_ACTIONS === "true" && targetCheckout) {
+    console.warn(
+      "Using danger-full-access Codex planner sandbox for ZeroHrs implementation planning because the GitHub Actions read-only sandbox can block target checkout inspection.",
+    );
+    return "danger-full-access";
+  }
+
+  return "read-only";
 }
 
 function codexConfigArgs() {

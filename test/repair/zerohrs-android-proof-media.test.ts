@@ -234,10 +234,10 @@ test("ZeroHrs Android review proof publisher plans current-state issue media", (
       {
         status: "completed",
         item_number: 274,
-        reproduction_route: "Account tab > Plans",
+        reproduction_route: "Billing gate > Compare Plans",
         captures: {
           before: {
-            route: "Account tab > Plans",
+            route: "Billing gate > Compare Plans",
             launcher_screen_detected: false,
             loading_screenshot: "before-loading.png",
             screenshot: "before.png",
@@ -380,12 +380,12 @@ test("ZeroHrs Android proof publisher rejects generic before-after media without
     JSON.stringify(
       {
         status: "completed",
-        reproduction_route: "Account tab > Plans",
+        reproduction_route: "Billing gate > Compare Plans",
         before_ref: "base-main-sha",
         after_ref: "fix-pr-sha",
         captures: {
           before: {
-            route: "Account tab > Plans",
+            route: "Billing gate > Compare Plans",
             ref: "base-main-sha",
             launcher_screen_detected: false,
             loading_screenshot: "before-loading.png",
@@ -393,7 +393,7 @@ test("ZeroHrs Android proof publisher rejects generic before-after media without
             recording: "before.mp4",
           },
           after: {
-            route: "Account tab > Plans",
+            route: "Billing gate > Compare Plans",
             ref: "fix-pr-sha",
             launcher_screen_detected: false,
             loading_screenshot: "after-loading.png",
@@ -515,12 +515,12 @@ test("ZeroHrs Android proof publisher rejects completed media without prose evid
     JSON.stringify(
       {
         status: "completed",
-        reproduction_route: "Account tab > Plans",
+        reproduction_route: "Billing gate > Compare Plans",
         before_ref: "base-main-sha",
         after_ref: "fix-pr-sha",
         captures: {
           before: {
-            route: "Account tab > Plans",
+            route: "Billing gate > Compare Plans",
             ref: "base-main-sha",
             launcher_screen_detected: false,
             loading_screenshot: "before-loading.png",
@@ -529,7 +529,7 @@ test("ZeroHrs Android proof publisher rejects completed media without prose evid
             issue_reproduced: true,
           },
           after: {
-            route: "Account tab > Plans",
+            route: "Billing gate > Compare Plans",
             ref: "fix-pr-sha",
             launcher_screen_detected: false,
             loading_screenshot: "after-loading.png",

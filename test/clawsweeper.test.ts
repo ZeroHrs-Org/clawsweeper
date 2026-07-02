@@ -1210,7 +1210,10 @@ test("failed Codex workers use bounded automatic retry paths", () => {
   assert.doesNotMatch(worker, /Codex output exceeded|CLAWSWEEPER_CODEX_STDIO_MAX_BUFFER_MB/);
   assert.match(worker, /Codex worker timed out[\s\S]*process\.exit\(1\)/);
   assert.match(worker, /CLAWSWEEPER_CODEX_PLANNER_SANDBOX/);
-  assert.match(worker, /\? "danger-full-access"\s*:\s*"read-only"/);
+  assert.match(
+    worker,
+    /Using danger-full-access Codex planner sandbox for ZeroHrs implementation planning/,
+  );
   assert.match(
     worker,
     /Codex worker completed without a structured result\.json artifact[\s\S]*process\.exit\(1\)/,

@@ -126,3 +126,113 @@ test("run-worker starts Codex in the target checkout when one is available", () 
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test("run-worker avoids the GitHub Actions read-only sandbox for ZeroHrs implementation planning", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "clawsweeper-run-worker-zerohrs-"));
+  const fakeBin = path.join(tmp, "bin");
+  const targetCheckout = path.join(tmp, "target-zerohrs");
+  const argsFile = path.join(tmp, "codex-args.json");
+  const jobName = `run-worker-zerohrs-sandbox-${path.basename(tmp)}`;
+  const jobPath = path.join(tmp, `${jobName}.md`);
+
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.mkdirSync(targetCheckout, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBin, "gh"),
+    [
+      "#!/usr/bin/env node",
+      "const args = process.argv.slice(2);",
+      "if (args[0] === 'api' && args[1] === 'repos/ZeroHrs-Org/zerohrs-app') {",
+      "  process.stdout.write(JSON.stringify({ default_branch: 'main' }));",
+      "  process.exit(0);",
+      "}",
+      "if (args[0] === 'api' && args[1] === 'repos/ZeroHrs-Org/zerohrs-app/branches/main') {",
+      "  process.stdout.write(JSON.stringify({ commit: { sha: '2222222222222222222222222222222222222222' } }));",
+      "  process.exit(0);",
+      "}",
+      "process.stderr.write(`unexpected gh args: ${args.join(' ')}\\n`);",
+      "process.exit(1);",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    path.join(fakeBin, "codex"),
+    [
+      "#!/usr/bin/env node",
+      "const fs = require('node:fs');",
+      "fs.writeFileSync(process.env.FAKE_CODEX_ARGS_FILE, JSON.stringify(process.argv.slice(2)));",
+      "const outputIndex = process.argv.indexOf('--output-last-message');",
+      "const outputPath = process.argv[outputIndex + 1];",
+      "const result = {",
+      "  status: 'planned',",
+      "  repo: 'ZeroHrs-Org/zerohrs-app',",
+      "  cluster_id: 'issue-zerohrs-org-zerohrs-app-274',",
+      "  mode: 'autonomous',",
+      "  summary: 'fake codex result',",
+      "  actions: [],",
+      "  needs_human: [],",
+      "  canonical: null,",
+      "  canonical_issue: null,",
+      "  canonical_pr: null,",
+      "  merge_preflight: [],",
+      "  fix_artifact: null,",
+      "};",
+      "fs.writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\\n`);",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+
+  fs.writeFileSync(
+    jobPath,
+    [
+      "---",
+      "repo: ZeroHrs-Org/zerohrs-app",
+      "cluster_id: issue-zerohrs-org-zerohrs-app-274",
+      "mode: autonomous",
+      "allowed_actions:",
+      "  - comment",
+      "  - label",
+      "  - fix",
+      "  - raise_pr",
+      "allow_fix_pr: true",
+      "candidates:",
+      '  - "#274"',
+      "source: clawsweeper_issue",
+      "commit_sha: 2222222222222222222222222222222222222222",
+      "security_policy: central_security_only",
+      "security_sensitive: false",
+      "---",
+      "Implement issue #274.",
+      "",
+    ].join("\n"),
+  );
+
+  try {
+    execFileSync(process.execPath, ["dist/repair/run-worker.js", jobPath, "--mode", "autonomous"], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        CLAWSWEEPER_ALLOWED_OWNER: "ZeroHrs-Org",
+        CLAWSWEEPER_ALLOW_EXECUTE: "1",
+        CLAWSWEEPER_ALLOW_FIX_PR: "1",
+        CLAWSWEEPER_TARGET_CHECKOUT: targetCheckout,
+        CLAWSWEEPER_CODEX_PLANNER_SANDBOX: "read-only",
+        CLAWSWEEPER_STEERABLE_CODEX: "0",
+        FAKE_CODEX_ARGS_FILE: argsFile,
+        GITHUB_ACTIONS: "true",
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+      stdio: "pipe",
+    });
+
+    const args = JSON.parse(fs.readFileSync(argsFile, "utf8"));
+    assert.equal(args[args.indexOf("--sandbox") + 1], "danger-full-access");
+  } finally {
+    for (const runDir of fs.globSync(
+      path.join(repoRoot, `.clawsweeper-repair/runs/${jobName}-autonomous-*`),
+    )) {
+      fs.rmSync(runDir, { recursive: true, force: true });
+    }
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
