@@ -154,6 +154,8 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /captures\.before\.issue_evidence/);
   assert.match(prompt, /captures\.after\.issue_resolved: true/);
   assert.match(prompt, /captures\.after\.fix_evidence/);
+  assert.match(prompt, /inspect `reports\/clawsweeper\/android-proof\/proof-manifest\.json`/);
+  assert.match(prompt, /update the manifest with the specific visible before\/after observations/);
   assert.match(prompt, /manifest `status` to `blocked`/);
   assert.match(prompt, /keep the Codex edit pass narrow/);
   assert.match(

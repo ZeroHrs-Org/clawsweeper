@@ -2257,6 +2257,15 @@ function editValidatePrepareMerge({
         if (attempt < maxEditAttempts) continue;
         throw new Error(proofRequirement.reason);
       }
+      if (isZeroHrsIssueImplementation()) {
+        const proofArtifacts = copyExecutorAndroidProofArtifacts(resultPath);
+        if (proofArtifacts?.status !== "collected") {
+          throw new Error(
+            `ZeroHrs Android proof passed validation but could not be collected: ${proofArtifacts?.reason ?? "unknown"}`,
+          );
+        }
+        logProgress("collected ZeroHrs Android proof artifacts", proofArtifacts);
+      }
 
       const hasWorkingTreeChanges = Boolean(committableGitStatus({ targetDir }).trim());
       const hasHeadChanges = currentHead(targetDir) !== headBeforeAttempt;
@@ -3532,10 +3541,8 @@ function zeroHrsForbiddenProofRouteDiff({ targetDir }: { targetDir: string }) {
     ),
   ]);
   const fileFindings = changedFiles
-    .filter(
-      (file) =>
-        fs.existsSync(path.join(targetDir, file)) &&
-        ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS.some((pattern) => pattern.test(file)),
+    .filter((file) =>
+      ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS.some((pattern) => pattern.test(file)),
     )
     .map((file) => `forbidden proof-route file in target diff: ${file}`);
   const diffText = run(
@@ -3543,9 +3550,9 @@ function zeroHrsForbiddenProofRouteDiff({ targetDir }: { targetDir: string }) {
     ["diff", "-U0", restoreSource, "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS],
     { cwd: targetDir },
   );
-  const addedDiffText = addedDiffLinesOnly(diffText);
+  const changedDiffText = changedDiffLinesOnly(diffText);
   const textFindings = ZEROHRS_FORBIDDEN_PROOF_ROUTE_TEXT_PATTERNS.filter((pattern) =>
-    pattern.test(addedDiffText),
+    pattern.test(changedDiffText),
   ).map((pattern) => `forbidden proof-route product diff pattern matched: ${pattern.source}`);
   const untrackedTextFindings = changedFiles
     .filter((file) => !fileFindings.some((finding) => finding.endsWith(file)))
@@ -3553,10 +3560,14 @@ function zeroHrsForbiddenProofRouteDiff({ targetDir }: { targetDir: string }) {
   return uniqueStrings([...fileFindings, ...textFindings, ...untrackedTextFindings]);
 }
 
-function addedDiffLinesOnly(diffText: string) {
+function changedDiffLinesOnly(diffText: string) {
   return diffText
     .split(/\r?\n/)
-    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .filter(
+      (line) =>
+        (line.startsWith("+") && !line.startsWith("+++")) ||
+        (line.startsWith("-") && !line.startsWith("---")),
+    )
     .map((line) => line.slice(1))
     .join("\n");
 }
@@ -3965,30 +3976,32 @@ function writeReport(report: LooseRecord, resultPath: string) {
 
 function collectExecutorAndroidProofArtifacts(report: LooseRecord, resultPath: string) {
   if (String(result.repo ?? "").toLowerCase() !== ZEROHRS_REPO.toLowerCase()) return;
+  report.android_proof_artifacts = copyExecutorAndroidProofArtifacts(resultPath);
+}
+
+function copyExecutorAndroidProofArtifacts(resultPath: string): LooseRecord {
   if (!targetDir || !fs.existsSync(targetDir)) {
-    report.android_proof_artifacts = {
+    return {
       status: "missing",
       reason: "target checkout is not available for proof artifact collection",
       expected_path: EXECUTOR_ANDROID_PROOF_SOURCE_DIR,
     };
-    return;
   }
 
   const sourceDir = path.join(targetDir, EXECUTOR_ANDROID_PROOF_SOURCE_DIR);
   if (!fs.existsSync(sourceDir)) {
-    report.android_proof_artifacts = {
+    return {
       status: "missing",
       reason: "executor did not produce Android proof artifacts",
       expected_path: EXECUTOR_ANDROID_PROOF_SOURCE_DIR,
     };
-    return;
   }
 
   const destination = path.join(path.dirname(resultPath), EXECUTOR_ANDROID_PROOF_RUN_DIR);
   fs.rmSync(destination, { recursive: true, force: true });
   fs.mkdirSync(destination, { recursive: true });
   fs.cpSync(sourceDir, destination, { recursive: true, force: true });
-  report.android_proof_artifacts = {
+  return {
     status: "collected",
     source_path: EXECUTOR_ANDROID_PROOF_SOURCE_DIR,
     path: path.relative(repoRoot(), destination),

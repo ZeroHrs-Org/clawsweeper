@@ -124,8 +124,12 @@ test("ZeroHrs exact feedback dispatch runs Android proof and syncs a review comm
   assert.match(reviewJob, /before\.mp4/);
   assert.match(reviewJob, /current-state reproduction evidence only/);
   assert.match(reviewJob, /there is no after-fix proof yet/);
+  assert.match(reviewJob, /manually navigating the real app UI/);
   assert.match(reviewJob, /reports\/clawsweeper\/android-proof/);
-  assert.match(reviewJob, /generic start-page screenshots as sufficient/);
+  assert.match(reviewJob, /generic start-page screenshots[\s\S]*as sufficient/);
+  assert.match(reviewJob, /product proof routes/);
+  assert.match(reviewJob, /proof-route env flags/);
+  assert.match(reviewJob, /tests whose only purpose is proof navigation/);
   assert.match(reviewJob, /seed\/mock local dev database rows/);
   assert.match(reviewJob, /\.crabbox\/runs\//);
   assert.match(reviewJob, /reports\/crabbox-android\//);

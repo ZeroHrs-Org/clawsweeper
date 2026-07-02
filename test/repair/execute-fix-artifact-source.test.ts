@@ -211,6 +211,9 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   const restoreEnd = source.indexOf("function isZeroHrsIssueImplementation(", restoreStart);
   const sourceStart = source.indexOf("function zeroHrsProofHarnessRestoreSource(");
   const proofRequirementStart = source.indexOf("function zeroHrsIssueProofRequirement(");
+  const proofSatisfiedStart = source.indexOf('if (proofRequirement.status !== "satisfied")');
+  const producedChangesStart = source.indexOf("const hasWorkingTreeChanges", proofSatisfiedStart);
+  const copyStart = source.indexOf("function copyExecutorAndroidProofArtifacts(");
 
   assert.notEqual(checkpointStart, -1);
   assert.notEqual(checkpointEnd, -1);
@@ -220,11 +223,19 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.notEqual(restoreEnd, -1);
   assert.notEqual(sourceStart, -1);
   assert.notEqual(proofRequirementStart, -1);
+  assert.notEqual(proofSatisfiedStart, -1);
+  assert.notEqual(producedChangesStart, -1);
+  assert.notEqual(copyStart, -1);
 
   const checkpoint = source.slice(checkpointStart, checkpointEnd);
   const unstage = source.slice(unstageStart, unstageEnd);
   const restore = source.slice(restoreStart, restoreEnd);
   const sourceHelper = source.slice(sourceStart, source.indexOf("function pushRecoverableBranch("));
+  const proofSatisfied = source.slice(proofSatisfiedStart, producedChangesStart);
+  const copyHelper = source.slice(
+    copyStart,
+    source.indexOf("function listRelativeFiles(", copyStart),
+  );
   const proofPathStart = source.indexOf("const PROOF_ARTIFACT_GIT_PATHS = [");
   const proofPathEnd = source.indexOf("];", proofPathStart);
   const proofPaths = source.slice(proofPathStart, proofPathEnd);
@@ -258,6 +269,17 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /captures\.before\.issue_evidence/);
   assert.match(source, /captures\.after\.issue_resolved/);
   assert.match(source, /captures\.after\.fix_evidence/);
+  assert.match(proofSatisfied, /copyExecutorAndroidProofArtifacts\(resultPath\)/);
+  assert.match(
+    proofSatisfied,
+    /ZeroHrs Android proof passed validation but could not be collected/,
+  );
+  assert.match(proofSatisfied, /collected ZeroHrs Android proof artifacts/);
+  assert.match(copyHelper, /EXECUTOR_ANDROID_PROOF_RUN_DIR/);
+  assert.match(
+    copyHelper,
+    /fs\.cpSync\(sourceDir, destination, \{ recursive: true, force: true \}\)/,
+  );
   assert.match(source, /ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS = \[/);
   assert.match(source, /ZEROHRS_FORBIDDEN_PROOF_ROUTE_TEXT_PATTERNS = \[/);
   assert.match(source, /zeroHrsProofRoute/);
@@ -265,11 +287,15 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /Constants\\\.expoConfig/);
   assert.match(source, /assertNoZeroHrsProofRouteProductDiff\(\{/);
   assert.match(source, /zeroHrsForbiddenProofRouteDiff\(\{/);
-  assert.match(source, /addedDiffLinesOnly\(diffText\)/);
-  assert.match(source, /function addedDiffLinesOnly\(diffText: string\)/);
+  assert.match(source, /changedDiffLinesOnly\(diffText\)/);
+  assert.match(source, /function changedDiffLinesOnly\(diffText: string\)/);
   assert.match(source, /line\.startsWith\("\+"\) && !line\.startsWith\("\+\+\+"\)/);
-  assert.match(source, /fs\.existsSync\(path\.join\(targetDir, file\)\)/);
-  assert.match(source, /pattern\.test\(addedDiffText\)/);
+  assert.match(source, /line\.startsWith\("-"\) && !line\.startsWith\("---"\)/);
+  assert.doesNotMatch(
+    source,
+    /fs\.existsSync\(path\.join\(targetDir, file\)\) &&\s*ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS/s,
+  );
+  assert.match(source, /pattern\.test\(changedDiffText\)/);
   assert.match(source, /ZeroHrs Android proof must use manual app navigation/);
   assert.match(source, /committed proof-route product code/);
   assert.match(source, /Remove proof-only navigation, env, Constants\.expoConfig/);
