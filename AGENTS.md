@@ -58,6 +58,27 @@ not split reports into issue/PR subtrees.
 - Locked-comment 403s from GitHub are terminal apply skips, not retryable API
   failures.
 
+## ZeroHrs Android Proof
+
+- For `ZeroHrs-Org/zerohrs-app` mobile feedback, treat feedback issues as
+  external user reports even when the GitHub issue author is a maintainer.
+- Planning/review comments must include current-state Android reproduction
+  media: screenshot(s) plus MP4 recording(s). There is no after-fix proof during
+  planning. Capture the media by manually navigating the real app UI on Android;
+  launcher screens, generic start pages, product proof routes, and proof-route
+  env flags are not valid proof.
+- Execution proof must include before and after Android media from the real app
+  path: `before-loading.png`, `before.mp4`, `after-loading.png`, and
+  `after.mp4`, plus the manifest and logs. The executor agent owns the
+  issue-specific navigation and may use a temporary proof driver or local
+  seed/mock data, but must not add product routes, screens, app navigation
+  plumbing, `zeroHrsProofRoute`/`proofRoute`, `EXPO_PUBLIC_*PROOF*`,
+  `Constants.expoConfig` proof wiring, or tests whose only purpose is proof
+  navigation to the target PR diff.
+- Keep proof media out of committed target-repo diffs. Store publishable proof
+  artifacts under `reports/clawsweeper/android-proof` for repair execution or
+  under the review proof artifact directory for planning/review.
+
 ## Commands
 
 ```bash
