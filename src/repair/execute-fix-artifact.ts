@@ -2229,10 +2229,14 @@ function editValidatePrepareMerge({
         restoredProofHarnessFiles,
       });
       if (proofRequirement.status !== "satisfied") {
+        const proofArtifacts = copyExecutorAndroidProofArtifacts(resultPath);
+        if (proofArtifacts?.status === "collected") {
+          logProgress("collected unsatisfied ZeroHrs Android proof artifacts", proofArtifacts);
+        }
         previousSummary = [
           readTextIfExists(summaryPath).trim(),
           proofRequirement.reason,
-          "For the next attempt, do not edit or bootstrap protected proof infrastructure. Run the real Crabbox SSH proof path, do not use dry-run mode, and copy completed proof files into reports/clawsweeper/android-proof before returning. If host-key/auth/runner trust fails, write a blocked proof manifest with command.log and stop without fabricating media.",
+          "For the next attempt, do not edit or bootstrap protected proof infrastructure. Run the real Crabbox SSH proof path, do not use dry-run mode, and copy completed proof files into reports/clawsweeper/android-proof before returning. If the blocker is app navigation, onboarding, billing, entitlement, referral, or account state, seed local data/admin codes or use a temporary issue-specific proof driver to reach the real screen. Only treat host-key/auth/runner trust failures as external infrastructure; in that case write a blocked proof manifest with command.log and stop without fabricating media.",
         ]
           .filter(Boolean)
           .join("\n\n")
@@ -2251,9 +2255,6 @@ function editValidatePrepareMerge({
           details: proofRequirement.reason,
           headSha: currentHead(targetDir),
         });
-        if (proofRequirement.status === "blocked") {
-          throw new Error(proofRequirement.reason);
-        }
         if (attempt < maxEditAttempts) continue;
         throw new Error(proofRequirement.reason);
       }
@@ -3653,7 +3654,7 @@ function zeroHrsIssueProofRequirement({
     if (manifest.status === "blocked") {
       return {
         status: "blocked",
-        reason: `ZeroHrs Android proof is blocked by external runner infrastructure: ${proofManifestBlocker(manifest)}.${restoredNote}`,
+        reason: `ZeroHrs Android proof is blocked before valid before/after media: ${proofManifestBlocker(manifest)}.${restoredNote}`,
       };
     }
     if (manifest.status === "dry-run") {

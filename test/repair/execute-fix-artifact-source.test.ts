@@ -269,7 +269,15 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /captures\.before.*issue_evidence/s);
   assert.match(source, /captures\.after\.issue_resolved/);
   assert.match(source, /captures\.after.*fix_evidence/s);
+  assert.match(source, /ZeroHrs Android proof is blocked before valid before\/after media/);
+  assert.doesNotMatch(source, /blocked by external runner infrastructure/);
   assert.match(proofSatisfied, /copyExecutorAndroidProofArtifacts\(resultPath\)/);
+  assert.match(proofSatisfied, /collected unsatisfied ZeroHrs Android proof artifacts/);
+  assert.match(
+    proofSatisfied,
+    /If the blocker is app navigation, onboarding, billing, entitlement, referral, or account state/,
+  );
+  assert.doesNotMatch(proofSatisfied, /proofRequirement\.status === "blocked"/);
   assert.match(
     proofSatisfied,
     /ZeroHrs Android proof passed validation but could not be collected/,
