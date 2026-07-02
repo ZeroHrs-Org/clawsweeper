@@ -126,6 +126,14 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /bootstrap-hetzner-android-runner\.sh/);
   assert.match(prompt, /ClawSweeper restores them before staging/);
   assert.match(prompt, /temporary proof driver/);
+  assert.match(prompt, /navigate through the real app UI/);
+  assert.match(prompt, /do not alter the app navigation tree/);
+  assert.match(prompt, /forbidden in the target PR diff/);
+  assert.match(prompt, /zeroHrsProofRoute/);
+  assert.match(prompt, /EXPO_PUBLIC_\*PROOF\*/);
+  assert.match(prompt, /Constants\.expoConfig/);
+  assert.match(prompt, /tests whose only purpose is proof navigation/);
+  assert.match(prompt, /outside the committed target app diff/);
   assert.match(prompt, /do not set `ZEROHRS_ANDROID_PROOF_DRY_RUN=1`/);
   assert.match(prompt, /do not create placeholder or fake png\/mp4 media/);
   assert.match(prompt, /do not return saying Android proof still needs to be generated/);

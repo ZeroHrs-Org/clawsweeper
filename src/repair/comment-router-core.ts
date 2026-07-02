@@ -584,20 +584,28 @@ function zeroHrsIssueImplementationGuardrails(repo: unknown) {
 - If labels, body text, report id, screenshot metadata, or admin feedback links
   indicate mobile feedback, treat the issue as an external user report even when
   the GitHub author is a ZeroHrs maintainer or repository owner.
-- For mobile UI/runtime issues, verify on Android with the target repo Crabbox
-  environment when available. During planning/review, capture only current-state
-  reproduction artifacts; there is no after-fix proof yet. Do not accept Android
-  launcher screenshots or generic start-page captures as sufficient proof.
+	- For mobile UI/runtime issues, verify on Android with the target repo Crabbox
+	  environment when available. During planning/review, capture only current-state
+	  reproduction artifacts; there is no after-fix proof yet. The plan/review
+	  comment must include or link the current-state Android screenshot(s) and MP4
+	  recording(s) captured by manually navigating the real app UI. Do not accept
+	  Android launcher screenshots or generic start-page captures as sufficient proof.
 - Missing local \`adb\`, \`emulator\`, or \`ffmpeg\` on the GitHub Actions
   runner is expected and is not a proof blocker. Use the configured Crabbox SSH
   runner through the target repo proof wrapper or an issue-specific
   \`crabbox run\` command for Android media capture.
-- The executor agent, not a hardcoded shared script, owns issue-specific proof.
-  It must decide the reproduction path, capture before evidence from current
-  \`main\`, capture after evidence from the fixed branch, and save media under
-  \`reports/clawsweeper/android-proof\` for ClawSweeper to collect and publish.
-  Required execution media are \`before-loading.png\`, \`before.mp4\`,
-  \`after-loading.png\`, and \`after.mp4\`.
+	- The executor agent, not a hardcoded shared script, owns issue-specific proof.
+	  It must decide the reproduction path, manually navigate the real app UI,
+	  capture before evidence from current
+	  \`main\`, capture after evidence from the fixed branch, and save media under
+	  \`reports/clawsweeper/android-proof\` for ClawSweeper to collect and publish.
+	  Required execution media are \`before-loading.png\`, \`before.mp4\`,
+	  \`after-loading.png\`, and \`after.mp4\`.
+	- Do not add product code, navigation routes, screens, env flags,
+	  \`Constants.expoConfig\` proof plumbing, \`EXPO_PUBLIC_*PROOF*\` variables,
+	  \`zeroHrsProofRoute\`/\`proofRoute\` files, or tests whose only purpose is
+	  proof navigation. Temporary proof drivers belong outside the committed app
+	  diff or under ignored proof artifacts.
 - When reproduction depends on account, app, or database state, seed or mock the
   local dev/test database with the minimum rows needed to reproduce the report,
   document the seed commands or fixture, and never use production data.

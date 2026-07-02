@@ -258,6 +258,16 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /captures\.before\.issue_evidence/);
   assert.match(source, /captures\.after\.issue_resolved/);
   assert.match(source, /captures\.after\.fix_evidence/);
+  assert.match(source, /ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS = \[/);
+  assert.match(source, /ZEROHRS_FORBIDDEN_PROOF_ROUTE_TEXT_PATTERNS = \[/);
+  assert.match(source, /zeroHrsProofRoute/);
+  assert.match(source, /EXPO_PUBLIC_\[A-Z0-9_\]\*PROOF/);
+  assert.match(source, /Constants\\\.expoConfig/);
+  assert.match(source, /assertNoZeroHrsProofRouteProductDiff\(\{/);
+  assert.match(source, /zeroHrsForbiddenProofRouteDiff\(\{/);
+  assert.match(source, /ZeroHrs Android proof must use manual app navigation/);
+  assert.match(source, /committed proof-route product code/);
+  assert.match(source, /Remove proof-only navigation, env, Constants\.expoConfig/);
   assert.match(source, /scripts\/crabbox\/android-proof\.sh/);
   assert.match(source, /scripts\/crabbox\/bootstrap-hetzner-android-runner\.sh/);
   assert.match(source, /scripts\/crabbox\/run-android-proof\.sh/);
@@ -271,8 +281,10 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.doesNotMatch(proofExcludes, /docs\/crabbox-hetzner-feedback/);
   assert.ok(
     checkpoint.indexOf("restoreZeroHrsIssueProofHarness({ targetDir });") <
-      checkpoint.indexOf('run("git", ["add"'),
-    "protected proof harness files must be restored before staging",
+      checkpoint.indexOf("assertNoZeroHrsProofRouteProductDiff({ targetDir });") &&
+      checkpoint.indexOf("assertNoZeroHrsProofRouteProductDiff({ targetDir });") <
+        checkpoint.indexOf('run("git", ["add"'),
+    "protected proof harness files must be restored and proof-route product diffs blocked before staging",
   );
   assert.match(checkpoint, /run\("git", \["add", "--all", "--", "\."\]/);
   assert.doesNotMatch(

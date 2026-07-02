@@ -48,13 +48,23 @@ test("ZeroHrs feedback profile treats maintainer-authored reports as external fe
     profile.promptNote,
     /During planning\/review, collect current-state reproduction artifacts only/,
   );
+  assert.match(profile.promptNote, /Planning\/review comments must include or link/);
+  assert.match(profile.promptNote, /current-state Android screenshot\(s\) and MP4 recording\(s\)/);
+  assert.match(profile.promptNote, /manually navigating the real app UI/);
   assert.match(profile.promptNote, /executor agent decides the issue-specific reproduction path/);
+  assert.match(profile.promptNote, /Do not add product code, navigation routes/);
+  assert.match(profile.promptNote, /Constants\.expoConfig proof plumbing/);
+  assert.match(profile.promptNote, /EXPO_PUBLIC_\*PROOF\* variables/);
+  assert.match(profile.promptNote, /zeroHrsProofRoute\/proofRoute files/);
+  assert.match(profile.promptNote, /tests whose only purpose is proof navigation/);
+  assert.match(profile.promptNote, /outside the committed app diff/);
   assert.match(profile.promptNote, /inside the target checkout/);
   assert.match(profile.promptNote, /external \/tmp-only proof is not publishable/);
   assert.match(profile.promptNote, /reports\/clawsweeper\/android-proof/);
   assert.match(profile.promptNote, /Do not edit shared proof harness files for one issue/);
   assert.match(profile.promptNote, /ClawSweeper restores them before staging/);
   assert.match(profile.promptNote, /temporary proof driver/);
+  assert.match(profile.promptNote, /target app source\/tests/);
   assert.match(profile.promptNote, /proof-manifest\.json with structured captures metadata/);
   assert.match(profile.promptNote, /pre-fix current-main checkout/);
   assert.match(profile.promptNote, /never same-checkout early\/later screenshots/);

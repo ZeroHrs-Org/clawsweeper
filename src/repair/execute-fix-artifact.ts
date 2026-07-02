@@ -175,6 +175,17 @@ const PROOF_ARTIFACT_GIT_EXCLUDE_PATHS = [
   `:(exclude)${EXECUTOR_ANDROID_PROOF_SOURCE_DIR}/**`,
   `:(exclude)${LEGACY_ANDROID_PROOF_SOURCE_DIR}/**`,
 ];
+const ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS = [
+  /(^|\/)zeroHrsProofRoute(\.test)?\.[cm]?[tj]sx?$/i,
+  /(^|\/)proofRoute(\.test)?\.[cm]?[tj]sx?$/i,
+];
+const ZEROHRS_FORBIDDEN_PROOF_ROUTE_TEXT_PATTERNS = [
+  /EXPO_PUBLIC_[A-Z0-9_]*PROOF[A-Z0-9_]*/,
+  /\bzeroHrsProofRoute\b/,
+  /\bproofRoute\b/,
+  /Constants\.expoConfig\?\.extra\?\.zerohrs/,
+  /proof[-_\s]?route/i,
+];
 
 const args = parseArgs(process.argv.slice(2));
 const jobPath = args._[0];
@@ -3456,6 +3467,7 @@ function checkoutRecoverableReplacementBranch({
 
 function commitCheckpointIfNeeded({ targetDir, message, trailers = [] }: LooseRecord) {
   restoreZeroHrsIssueProofHarness({ targetDir });
+  assertNoZeroHrsProofRouteProductDiff({ targetDir });
   if (!committableGitStatus({ targetDir }).trim()) return "";
   run("git", ["add", "--all", "--", "."], {
     cwd: targetDir,
@@ -3482,6 +3494,82 @@ function committableGitStatus({ targetDir }: { targetDir: string }) {
   return run("git", ["status", "--porcelain", "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS], {
     cwd: targetDir,
   });
+}
+
+function assertNoZeroHrsProofRouteProductDiff({ targetDir }: { targetDir: string }) {
+  const findings = zeroHrsForbiddenProofRouteDiff({ targetDir });
+  if (!findings.length) return;
+  throw new Error(
+    [
+      "ZeroHrs Android proof must use manual app navigation from the executor, not committed proof-route product code.",
+      "Remove proof-only navigation, env, Constants.expoConfig, or test plumbing from the target PR diff and capture media with an external temporary proof driver instead.",
+      ...findings.map((finding) => `- ${finding}`),
+    ].join("\n"),
+  );
+}
+
+function zeroHrsForbiddenProofRouteDiff({ targetDir }: { targetDir: string }) {
+  if (!isZeroHrsIssueImplementation()) return [];
+  const restoreSource = zeroHrsProofHarnessRestoreSource(targetDir);
+  const changedFiles = uniqueStrings([
+    ...gitLines(
+      targetDir,
+      "diff",
+      "--name-only",
+      restoreSource,
+      "--",
+      ".",
+      ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS,
+    ),
+    ...gitLines(
+      targetDir,
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+      "--",
+      ".",
+      ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS,
+    ),
+  ]);
+  const fileFindings = changedFiles
+    .filter((file) =>
+      ZEROHRS_FORBIDDEN_PROOF_ROUTE_PATH_PATTERNS.some((pattern) => pattern.test(file)),
+    )
+    .map((file) => `forbidden proof-route file in target diff: ${file}`);
+  const diffText = run(
+    "git",
+    ["diff", "-U0", restoreSource, "--", ".", ...PROOF_ARTIFACT_GIT_EXCLUDE_PATHS],
+    { cwd: targetDir },
+  );
+  const textFindings = ZEROHRS_FORBIDDEN_PROOF_ROUTE_TEXT_PATTERNS.filter((pattern) =>
+    pattern.test(diffText),
+  ).map((pattern) => `forbidden proof-route product diff pattern matched: ${pattern.source}`);
+  const untrackedTextFindings = changedFiles
+    .filter((file) => !fileFindings.some((finding) => finding.endsWith(file)))
+    .flatMap((file) => zeroHrsForbiddenProofRouteFileTextFindings(targetDir, file));
+  return uniqueStrings([...fileFindings, ...textFindings, ...untrackedTextFindings]);
+}
+
+function zeroHrsForbiddenProofRouteFileTextFindings(targetDir: string, relativePath: string) {
+  const absolutePath = path.join(targetDir, relativePath);
+  if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) return [];
+  if (fs.statSync(absolutePath).size > 256 * 1024) return [];
+  let text = "";
+  try {
+    text = fs.readFileSync(absolutePath, "utf8");
+  } catch {
+    return [];
+  }
+  return ZEROHRS_FORBIDDEN_PROOF_ROUTE_TEXT_PATTERNS.filter((pattern) => pattern.test(text)).map(
+    (pattern) => `forbidden proof-route text in target file ${relativePath}: ${pattern.source}`,
+  );
+}
+
+function gitLines(targetDir: string, ...args: string[]) {
+  return run("git", args, { cwd: targetDir })
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function restoreZeroHrsIssueProofHarness({ targetDir }: { targetDir: string }) {
