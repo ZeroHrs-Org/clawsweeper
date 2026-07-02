@@ -382,7 +382,7 @@ test("ZeroHrs Android proof publisher rejects generic before-after media without
         status: "completed",
         reproduction_route: "Billing gate > Compare Plans",
         before_ref: "base-main-sha",
-        after_ref: "fix-pr-sha",
+        after_ref: "66525b903309",
         captures: {
           before: {
             route: "Billing gate > Compare Plans",
@@ -394,7 +394,7 @@ test("ZeroHrs Android proof publisher rejects generic before-after media without
           },
           after: {
             route: "Billing gate > Compare Plans",
-            ref: "fix-pr-sha",
+            ref: "66525b903309",
             launcher_screen_detected: false,
             loading_screenshot: "after-loading.png",
             screenshot: "after.png",
@@ -517,7 +517,7 @@ test("ZeroHrs Android proof publisher rejects completed media without prose evid
         status: "completed",
         reproduction_route: "Billing gate > Compare Plans",
         before_ref: "base-main-sha",
-        after_ref: "fix-pr-sha",
+        after_ref: "66525b903309",
         captures: {
           before: {
             route: "Billing gate > Compare Plans",
@@ -530,7 +530,7 @@ test("ZeroHrs Android proof publisher rejects completed media without prose evid
           },
           after: {
             route: "Billing gate > Compare Plans",
-            ref: "fix-pr-sha",
+            ref: "66525b903309",
             launcher_screen_detected: false,
             loading_screenshot: "after-loading.png",
             screenshot: "after.png",
@@ -571,6 +571,145 @@ test("ZeroHrs Android proof publisher rejects completed media without prose evid
   }
 });
 
+test("ZeroHrs Android proof publisher rejects after media captured from non-PR head", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "zerohrs-proof-media-stale-after-"));
+  const fakeBin = path.join(tmp, "bin");
+  const jobPath = path.join(tmp, "job.md");
+  const runDir = path.join(tmp, "run");
+  const resultPath = path.join(runDir, "result.json");
+  const reportPath = path.join(runDir, "zerohrs-android-proof-report.json");
+  const proofDir = path.join(runDir, "zerohrs-android-proof", "executor");
+
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.mkdirSync(proofDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBin, "gh"),
+    [
+      "#!/usr/bin/env node",
+      "const args = process.argv.slice(2);",
+      "if (args[0] === 'pr' && args[1] === 'view' && args[2] === '272') {",
+      "  process.stdout.write(JSON.stringify({",
+      "    number: 272,",
+      "    url: 'https://github.com/ZeroHrs-Org/zerohrs-app/pull/272',",
+      "    title: 'Add Android proof media',",
+      "    headRefName: 'clawsweeper/issue-zerohrs-org-zerohrs-app-271',",
+      "    headRefOid: '66525b903309a706545d7c074150cf73728845f6',",
+      "    baseRefName: 'main',",
+      "  }));",
+      "  process.exit(0);",
+      "}",
+      "process.stderr.write(`unexpected gh args: ${args.join(' ')}\\n`);",
+      "process.exit(1);",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(jobPath, zeroHrsIssueImplementationJob());
+  fs.writeFileSync(
+    resultPath,
+    JSON.stringify(
+      {
+        repo: "ZeroHrs-Org/zerohrs-app",
+        cluster_id: "issue-zerohrs-org-zerohrs-app-271",
+        mode: "autonomous",
+        actions: [],
+      },
+      null,
+      2,
+    ),
+  );
+  fs.writeFileSync(
+    path.join(runDir, "fix-execution-report.json"),
+    JSON.stringify(
+      {
+        actions: [
+          {
+            action: "open_fix_pr",
+            status: "opened",
+            pr_url: "https://github.com/ZeroHrs-Org/zerohrs-app/pull/272",
+            branch: "clawsweeper/issue-zerohrs-org-zerohrs-app-271",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+  for (const name of [
+    "command.log",
+    "emulator.log",
+    "app.log",
+    "before-loading.png",
+    "after-loading.png",
+    "before.mp4",
+    "after.mp4",
+    "before.png",
+    "after.png",
+  ]) {
+    fs.writeFileSync(path.join(proofDir, name), `${name}\n`);
+  }
+  fs.writeFileSync(
+    path.join(proofDir, "proof-manifest.json"),
+    JSON.stringify(
+      {
+        status: "completed",
+        reproduction_route: "Billing gate > Compare Plans",
+        before_ref: "027206aa53bc",
+        after_ref: "3d557e46fb51",
+        captures: {
+          before: {
+            route: "Billing gate > Compare Plans",
+            ref: "027206aa53bc",
+            launcher_screen_detected: false,
+            loading_screenshot: "before-loading.png",
+            screenshot: "before.png",
+            recording: "before.mp4",
+            issue_reproduced: true,
+            issue_evidence: "Plans comparison shows Ess before the fix.",
+          },
+          after: {
+            route: "Billing gate > Compare Plans",
+            ref: "3d557e46fb51",
+            launcher_screen_detected: false,
+            loading_screenshot: "after-loading.png",
+            screenshot: "after.png",
+            recording: "after.mp4",
+            issue_resolved: true,
+            fix_evidence: "Plans comparison should show Basic after the fix.",
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  try {
+    assert.throws(() =>
+      execFileSync(
+        process.execPath,
+        ["dist/repair/zerohrs-android-proof-media.js", jobPath, resultPath],
+        {
+          cwd: repoRoot,
+          env: {
+            ...process.env,
+            CLAWSWEEPER_ALLOWED_OWNER: "ZeroHrs-Org",
+            GITHUB_RUN_ID: "28504191806",
+            GITHUB_RUN_ATTEMPT: "1",
+            PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
+          },
+          stdio: "pipe",
+        },
+      ),
+    );
+
+    const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+    assert.equal(report.status, "failed");
+    assert.match(String(report.reason), /after_ref 3d557e46fb51 does not match PR head/);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test("ZeroHrs Android proof publisher collects executor-owned artifacts", () => {
   const source = fs.readFileSync("src/repair/zerohrs-android-proof-media.ts", "utf8");
 
@@ -596,7 +735,7 @@ test("ZeroHrs Android proof publisher collects executor-owned artifacts", () => 
 test("ZeroHrs Android proof publisher blocks when executor proof is missing", () => {
   const source = fs.readFileSync("src/repair/zerohrs-android-proof-media.ts", "utf8");
   const copyStart = source.indexOf('const proofRoot = path.join(runDir, "zerohrs-android-proof")');
-  const publishStart = source.indexOf("const proofFiles = validateProofFiles(proofDir)", copyStart);
+  const publishStart = source.indexOf("const proofFiles = validateProofFiles(", copyStart);
   assert.notEqual(copyStart, -1);
   assert.notEqual(publishStart, -1);
   const collectionBlock = source.slice(copyStart, publishStart);

@@ -251,6 +251,7 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
   assert.match(source, /ZEROHRS_ANDROID_PROOF_HARNESS_FILES = \[/);
   assert.match(source, /EXECUTOR_ANDROID_REQUIRED_PROOF_FILES = \[/);
   assert.match(source, /zeroHrsIssueProofRequirement\(\{/);
+  assert.match(source, /branch,\s+baseBranch,\s+restoredProofHarnessFiles/s);
   assert.match(source, /do not edit or bootstrap protected proof infrastructure/);
   assert.match(source, /manifest\.status !== "completed"/);
   assert.match(source, /firstManifestString\(manifest/);
@@ -263,6 +264,8 @@ test("ZeroHrs issue implementation restores protected Android proof harness befo
     /ZeroHrs Android proof manifest is missing before\/after refs or branch names/,
   );
   assert.match(source, /ZeroHrs Android proof manifest before\/after refs must differ/);
+  assert.match(source, /ZeroHrs Android proof after capture must run from fixed branch/);
+  assert.match(source, /ZeroHrs Android proof after_ref resolves to origin/);
   assert.match(source, /launcher_screen_detected as false/);
   assert.match(source, /captures\?\.before\?\.loading_screenshot/);
   assert.match(source, /captures\.before\.issue_reproduced/);

@@ -2226,6 +2226,8 @@ function editValidatePrepareMerge({
       const restoredProofHarnessFiles = restoreZeroHrsIssueProofHarness({ targetDir });
       const proofRequirement = zeroHrsIssueProofRequirement({
         targetDir,
+        branch,
+        baseBranch,
         restoredProofHarnessFiles,
       });
       if (proofRequirement.status !== "satisfied") {
@@ -3630,9 +3632,13 @@ function restoreZeroHrsIssueProofHarness({ targetDir }: { targetDir: string }) {
 
 function zeroHrsIssueProofRequirement({
   targetDir,
+  branch,
+  baseBranch = DEFAULT_BASE_BRANCH,
   restoredProofHarnessFiles = [],
 }: {
   targetDir: string;
+  branch?: string | undefined;
+  baseBranch?: string;
   restoredProofHarnessFiles?: string[];
 }) {
   if (!isZeroHrsIssueImplementation()) return { status: "satisfied" };
@@ -3732,6 +3738,18 @@ function zeroHrsIssueProofRequirement({
       reason: `ZeroHrs Android proof manifest before/after refs must differ.${restoredNote}`,
     };
   }
+  const afterCheckout = zeroHrsProofAfterCheckoutStatus({
+    targetDir,
+    branch,
+    baseBranch,
+    afterRef,
+  });
+  if (afterCheckout.status !== "valid") {
+    return {
+      status: "invalid",
+      reason: `${afterCheckout.reason}.${restoredNote}`,
+    };
+  }
   const beforeLauncher = manifestValueAt(manifest, [
     "captures",
     "before",
@@ -3815,6 +3833,101 @@ function readExecutorAndroidProofManifest(manifestPath: string, restoredNote: st
       reason: `ZeroHrs Android proof manifest is not valid JSON: ${String(error instanceof Error ? error.message : error)}.${restoredNote}`,
     };
   }
+}
+
+function zeroHrsProofAfterCheckoutStatus({
+  targetDir,
+  branch,
+  baseBranch,
+  afterRef,
+}: {
+  targetDir: string;
+  branch?: string | undefined;
+  baseBranch?: string;
+  afterRef: string;
+}) {
+  const expectedBranch = String(branch ?? "").trim();
+  const currentBranch = gitCurrentBranch(targetDir);
+  if (expectedBranch && currentBranch !== expectedBranch) {
+    return {
+      status: "invalid" as const,
+      reason: `ZeroHrs Android proof after capture must run from fixed branch ${expectedBranch}; checkout is ${currentBranch || "detached"}`,
+    };
+  }
+
+  const normalizedAfterRef = normalizeProofGitRef(afterRef);
+  const normalizedBaseBranch = normalizeProofGitRef(baseBranch || DEFAULT_BASE_BRANCH);
+  const baseAliases = new Set([
+    normalizedBaseBranch,
+    `origin/${normalizedBaseBranch}`,
+    `refs/heads/${normalizedBaseBranch}`,
+    `refs/remotes/origin/${normalizedBaseBranch}`,
+  ]);
+  if (baseAliases.has(normalizedAfterRef)) {
+    return {
+      status: "invalid" as const,
+      reason: `ZeroHrs Android proof after_ref must identify the fixed branch, not ${afterRef}`,
+    };
+  }
+
+  const baseSha = gitRevParseOptional(targetDir, `origin/${normalizedBaseBranch}^{commit}`);
+  const afterSha = gitRevParseOptional(targetDir, `${afterRef}^{commit}`);
+  const currentSha = gitRevParseOptional(targetDir, "HEAD^{commit}");
+  if (afterSha && baseSha && afterSha === baseSha) {
+    return {
+      status: "invalid" as const,
+      reason: `ZeroHrs Android proof after_ref resolves to origin/${normalizedBaseBranch}; after media must come from the fixed branch`,
+    };
+  }
+  if (afterSha && currentSha && afterSha !== currentSha) {
+    return {
+      status: "invalid" as const,
+      reason: `ZeroHrs Android proof after_ref ${afterRef} does not match the current fixed checkout ${currentSha.slice(0, 12)}`,
+    };
+  }
+
+  if (
+    looksLikeGitSha(normalizedAfterRef) &&
+    currentSha &&
+    !currentSha.startsWith(normalizedAfterRef) &&
+    !normalizedAfterRef.startsWith(currentSha)
+  ) {
+    return {
+      status: "invalid" as const,
+      reason: `ZeroHrs Android proof after_ref ${afterRef} does not match the current fixed checkout ${currentSha.slice(0, 12)}`,
+    };
+  }
+
+  return { status: "valid" as const };
+}
+
+function gitCurrentBranch(targetDir: string) {
+  return spawnSync("git", ["branch", "--show-current"], {
+    cwd: targetDir,
+    env: process.env,
+    encoding: "utf8",
+  }).stdout.trim();
+}
+
+function gitRevParseOptional(targetDir: string, ref: string) {
+  const child = spawnSync("git", ["rev-parse", "--verify", ref], {
+    cwd: targetDir,
+    env: process.env,
+    encoding: "utf8",
+  });
+  const sha = child.status === 0 ? child.stdout.trim() : "";
+  return /^[0-9a-f]{40}$/i.test(sha) ? sha.toLowerCase() : "";
+}
+
+function normalizeProofGitRef(ref: string) {
+  return String(ref ?? "")
+    .trim()
+    .replace(/^refs\/heads\//, "")
+    .replace(/^refs\/remotes\//, "");
+}
+
+function looksLikeGitSha(ref: string) {
+  return /^[0-9a-f]{7,40}$/i.test(ref);
 }
 
 function proofManifestBlocker(manifest: LooseRecord) {

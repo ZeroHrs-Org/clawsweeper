@@ -194,7 +194,10 @@ async function maybeRunZeroHrsProof() {
   fs.mkdirSync(proofDir, { recursive: true });
   fs.cpSync(executorProofDir, proofDir, { recursive: true, force: true });
 
-  const proofFiles = validateProofFiles(proofDir);
+  const proofFiles = validateProofFiles(proofDir, {
+    expectedHeadBranch: view.headRefName,
+    expectedHeadSha: view.headRefOid,
+  });
   const published = publishProofAssets({
     proofDir,
     prNumber: parsed.number,
@@ -253,7 +256,10 @@ function fetchPullRequestView(number: number) {
   ]);
 }
 
-function validateProofFiles(proofDir: string) {
+function validateProofFiles(
+  proofDir: string,
+  expectedHead: { expectedHeadBranch?: JsonValue; expectedHeadSha?: JsonValue },
+) {
   const manifestPath = path.join(proofDir, "proof-manifest.json");
   const files = REQUIRED_PROOF_FILES.map((name) => {
     const filePath = path.join(proofDir, name);
@@ -294,6 +300,11 @@ function validateProofFiles(proofDir: string) {
   if (beforeRef === afterRef) {
     throw new Error("Android proof manifest before/after refs must differ");
   }
+  if (!manifestAfterRefMatchesPullHead(afterRef, expectedHead)) {
+    throw new Error(
+      `Android proof manifest after_ref ${afterRef} does not match PR head ${String(expectedHead.expectedHeadSha ?? expectedHead.expectedHeadBranch ?? "").slice(0, 12)}`,
+    );
+  }
   for (const field of [
     manifest?.captures?.before?.loading_screenshot,
     manifest?.captures?.before?.recording,
@@ -325,6 +336,37 @@ function validateProofFiles(proofDir: string) {
     throw new Error("Android proof manifest must include captures.after.fix_evidence");
   }
   return files;
+}
+
+function manifestAfterRefMatchesPullHead(
+  afterRef: string,
+  expectedHead: { expectedHeadBranch?: JsonValue; expectedHeadSha?: JsonValue },
+) {
+  const normalizedAfterRef = normalizeManifestGitRef(afterRef);
+  const headSha = String(expectedHead.expectedHeadSha ?? "")
+    .trim()
+    .toLowerCase();
+  const headBranch = normalizeManifestGitRef(String(expectedHead.expectedHeadBranch ?? ""));
+  if (headSha && refMatchesSha(normalizedAfterRef, headSha)) return true;
+  return Boolean(
+    headBranch &&
+    (normalizedAfterRef === headBranch ||
+      normalizedAfterRef === `origin/${headBranch}` ||
+      normalizedAfterRef === `heads/${headBranch}`),
+  );
+}
+
+function refMatchesSha(ref: string, sha: string) {
+  const normalized = ref.toLowerCase();
+  if (!/^[0-9a-f]{7,40}$/.test(normalized)) return false;
+  return sha.startsWith(normalized) || normalized.startsWith(sha);
+}
+
+function normalizeManifestGitRef(ref: string) {
+  return String(ref ?? "")
+    .trim()
+    .replace(/^refs\/heads\//, "")
+    .replace(/^refs\/remotes\//, "");
 }
 
 function firstManifestString(manifest: LooseRecord, paths: string[][]) {

@@ -151,6 +151,7 @@ test("fix prompt includes ZeroHrs mobile feedback proof expectations", () => {
   assert.match(prompt, /after-loading\.png/);
   assert.match(prompt, /after\.mp4/);
   assert.match(prompt, /same-checkout early\/later screenshots/);
+  assert.match(prompt, /must identify the fixed branch\/head, never `main`\/`origin\/main`/);
   assert.match(prompt, /if Expo Dev Launcher is visible/);
   assert.match(prompt, /launcher_screen_detected: false/);
   assert.match(prompt, /captures\.before\.issue_reproduced: true/);
